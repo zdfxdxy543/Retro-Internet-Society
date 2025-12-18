@@ -1,0 +1,16 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.text-line-height {
+    line-height:1.8;
+}
+
+.signature-style {
+    color: #666666;
+    font-size: 0.875rem; /* 小号字，和正文区分 */
+    font-style: italic; /* 斜体，突出签名属性 */
+    border-left: 2px solid #cccccc; /* 左边界线，复古论坛常见样式 */
+    padding-left: 0.75rem; /* 左内边距，排版更舒适 */
+    margin-top: 0.5rem; /* 和回帖正文保持间距 */
+}
