@@ -8,6 +8,12 @@ import Contact from '../views/Contact.vue'
 import DynamicPage from '../views/DynamicPage.vue'
 import UserProfile from '../views/UserProfile.vue'
 import SearchResult from '../views/SearchResult.vue'
+// 导入公司网站视图组件
+import CompanyIndex from '../views/CompanyIndex.vue'
+import CompanyProducts from '../views/CompanyProducts.vue'
+import CompanyProductDetail from '../views/CompanyProductDetail.vue'
+import CompanyAbout from '../views/CompanyAbout.vue'
+import CompanyContact from '../views/CompanyContact.vue'
 
 const routes = [
   {
@@ -63,6 +69,37 @@ const routes = [
     name: 'DynamicPage',
     component: DynamicPage,
     meta: { title: '复古论坛 - 动态页面' }
+  },
+  // 公司网站路由
+  {
+    path: '/company',
+    name: 'CompanyIndex',
+    component: CompanyIndex,
+    meta: { title: '未来科技有限公司 - 首页' }
+  },
+  {
+    path: '/company/products',
+    name: 'CompanyProducts',
+    component: CompanyProducts,
+    meta: { title: '未来科技有限公司 - 产品中心' }
+  },
+  {
+    path: '/company/product/:productId',
+    name: 'CompanyProductDetail',
+    component: CompanyProductDetail,
+    meta: { title: '未来科技有限公司 - 产品详情' }
+  },
+  {
+    path: '/company/about',
+    name: 'CompanyAbout',
+    component: CompanyAbout,
+    meta: { title: '未来科技有限公司 - 关于我们' }
+  },
+  {
+    path: '/company/contact',
+    name: 'CompanyContact',
+    component: CompanyContact,
+    meta: { title: '未来科技有限公司 - 联系我们' }
   }
 ]
 

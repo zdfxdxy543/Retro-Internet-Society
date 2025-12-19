@@ -82,3 +82,75 @@ class DynamicPage(db.Model):
             "category": self.category,
             "is_public": self.is_public
         }
+
+# -------------------------- 科技公司网站模型 --------------------------
+class CompanyInfo(db.Model):
+    """公司基本信息模型"""
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)  # 公司名称
+    description = db.Column(db.Text, nullable=False)  # 公司简介
+    founded_year = db.Column(db.Integer, nullable=False)  # 成立年份
+    address = db.Column(db.String(200), nullable=False)  # 公司地址
+    phone = db.Column(db.String(20), nullable=False)  # 联系电话
+    email = db.Column(db.String(100), nullable=False)  # 联系邮箱
+    website = db.Column(db.String(100), nullable=False)  # 公司官网
+    logo_url = db.Column(db.String(200))  # logo地址
+    slogan = db.Column(db.String(100), nullable=False)  # 公司口号
+    updated_time = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)  # 更新时间
+
+    def __repr__(self):
+        return f"<CompanyInfo {self.name}>"
+
+class ProductCategory(db.Model):
+    """产品分类模型"""
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), nullable=False)  # 分类名称
+    description = db.Column(db.String(200))  # 分类描述
+    order_num = db.Column(db.Integer, default=0)  # 排序号
+    create_time = db.Column(db.DateTime, default=datetime.utcnow)
+    # 关联产品
+    products = db.relationship("Product", backref="category", lazy=True, cascade="all, delete-orphan")
+
+    def __repr__(self):
+        return f"<ProductCategory {self.name}>"
+
+class Product(db.Model):
+    """产品详情模型"""
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)  # 产品名称
+    model = db.Column(db.String(50), nullable=False)  # 产品型号
+    description = db.Column(db.Text, nullable=False)  # 产品描述
+    features = db.Column(db.Text, nullable=False)  # 产品特性（JSON格式存储）
+    specifications = db.Column(db.Text, nullable=False)  # 产品规格（JSON格式存储）
+    category_id = db.Column(db.Integer, db.ForeignKey("product_category.id"), nullable=False)  # 所属分类
+    datasheet_url = db.Column(db.String(200))  # DataSheet PDF地址
+    image_url = db.Column(db.String(200))  # 产品图片地址
+    price = db.Column(db.Float)  # 产品价格
+    stock = db.Column(db.Integer, default=0)  # 库存数量
+    is_active = db.Column(db.Boolean, default=True)  # 是否上架
+    create_time = db.Column(db.DateTime, default=datetime.utcnow)  # 创建时间
+    update_time = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)  # 更新时间
+
+    def __repr__(self):
+        return f"<Product {self.name} - {self.model}>"
+
+    def to_dict(self):
+        """将产品对象转换为字典格式"""
+        import json
+        return {
+            "id": self.id,
+            "name": self.name,
+            "model": self.model,
+            "description": self.description,
+            "features": json.loads(self.features) if self.features else [],
+            "specifications": json.loads(self.specifications) if self.specifications else {},
+            "category_id": self.category_id,
+            "category_name": self.category.name if self.category else "",
+            "datasheet_url": self.datasheet_url,
+            "image_url": self.image_url,
+            "price": self.price,
+            "stock": self.stock,
+            "is_active": self.is_active,
+            "create_time": self.create_time.strftime("%Y-%m-%d %H:%M:%S"),
+            "update_time": self.update_time.strftime("%Y-%m-%d %H:%M:%S")
+        }

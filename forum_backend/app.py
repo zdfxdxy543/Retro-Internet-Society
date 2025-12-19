@@ -1,394 +1,58 @@
 from flask import Flask, request, jsonify, make_response, session
 from flask_cors import CORS
-from flask.views import MethodView  # 导入Flask类视图基类
 from config import config
-from models import db, Board, Post, Reply, PlayerStatus
+# 从forum.models导入数据库和模型类
+from forum.models import db, Board, Post, Reply, PlayerStatus, CompanyInfo, ProductCategory, Product
 from datetime import datetime
-from ai_page_generator import AIPageGenerator
+import os
+from flask.views import MethodView  # 导入Flask类视图基类
+from forum.ai_page_generator import AIPageGenerator
 from sqlalchemy.exc import SQLAlchemyError
 import functools
 
+# 创建Flask应用实例
 app = Flask(__name__)
 app.config.from_object(config)
 
+# 配置应用
 app.config["ALLOWED_HTML_TAGS"] = ["div", "p", "h2", "h3", "h4", "ul", "li", "a", "strong", "em", "code", "pre"]
 app.config["ALLOWED_HTML_ATTRS"] = {"a": ["href", "target", "rel"], "code": ["class"]}
 app.config["API_KEY"] = "your-secret-key-123456"  # 请替换为你的实际密钥（重要！）
 
+# 启用CORS
 CORS(app, supports_credentials=True)
+
+# 初始化数据库
+import os
+app_root = os.path.dirname(os.path.abspath(__file__))
+db_path = os.path.join(app_root, 'instance', 'forum.db')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL') or f'sqlite:///{db_path.replace(chr(92), "/")}'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production'
 db.init_app(app)
 
-ai_page_generator = AIPageGenerator(db=db,app_config=app.config)
+# -------------------------- 导入并注册所有蓝图 --------------------------
+# 导入蓝图
+from forum.blueprints.forum_pages import forum_bp
+from forum.blueprints.api import api_bp
+from forum.blueprints.user import user_bp
+# 导入company_pages模块，执行其中的路由注册代码
+from forum.blueprints.company_pages import api_bp  # 注意：这里不需要导入company_bp，因为路由已经注册到api_bp中
 
-# -------------------------- 1. 核心基类（所有网页路由继承此类）--------------------------
-class BasePageView(MethodView):
-    """网页路由基类：封装公共逻辑，子类只需实现 get_data()"""
-    
-    def dispatch_request(self, *args, **kwargs):
-        """所有请求都会经过此方法（MethodView核心），封装公共逻辑"""
-        try:
-            # 第一步：生成/验证匿名玩家ID（公共逻辑）
-            player_id = session.get("player_id")
-            if not player_id or not PlayerStatus.query.get(player_id):
-                # 新建匿名玩家
-                player = PlayerStatus()
-                db.session.add(player)
-                db.session.commit()
-                player_id = player.id
-                session["player_id"] = player_id
-            else:
-                # 更新最后访问时间
-                player = PlayerStatus.query.get(player_id)
-                player.last_visit = datetime.utcnow()
-                db.session.commit()
+# 注册蓝图
+app.register_blueprint(forum_bp)  # 论坛页面路由，前缀 /forum
+app.register_blueprint(api_bp)     # API路由，前缀 /api
+app.register_blueprint(user_bp)    # 用户相关路由，前缀 /user
+# 移除对company_bp的注册，因为公司网站路由现在已经注册到api_bp中了
+# app.register_blueprint(company_bp)  # 公司网站路由，前缀 /company
 
-            # 第二步：调用子类实现的 get_data()，获取页面专属数据
-            page_data = self.get_data(*args, **kwargs)  # 子类必须实现此方法
+# 为根路径添加重定向到论坛首页
+@app.route('/')
+def root():
+    from flask import redirect, url_for
+    return redirect(url_for('forum.indexview'))  # 重定向到论坛首页，注意端点名称是indexview而不是index
 
-            # 第三步：返回统一格式的响应（公共响应格式）
-            return jsonify({
-                "status": "success",
-                "data": {
-                    "player_id": player_id,  # 所有页面都返回匿名ID（前端无需显示）
-                    **page_data  # 合并子类返回的页面数据（如title、boards、posts等）
-                }
-            })
-        except Exception as e:
-            # 异常处理：返回404（拟真）
-            return make_response(jsonify({
-                "status": "error",
-                "msg": "404 Not Found - 页面不存在或已被删除",
-                "html": "<h1>404 页面不存在</h1><p>你访问的页面可能已经被删除，或者URL输入错误，请返回首页重试。</p>"
-            }), 404)
-
-    def get_data(self, *args, **kwargs):
-        """子类必须实现的方法：返回页面专属数据（如 {"title": "首页", "boards": [...]}）"""
-        raise NotImplementedError("子类必须实现 get_data() 方法")
-
-# -------------------------- 2. 辅助函数：简化路由注册（可选，进一步简化开发）--------------------------
-def register_page_route(url_rule, view_class, endpoint=None):
-    """
-    注册页面路由的辅助函数，避免重复写 add_url_rule
-    :param url_rule: 路由路径（如 "/"、"/board/<int:board_id>"）
-    :param view_class: 视图类（继承自 BasePageView）
-    :param endpoint: 路由别名（默认用视图类名小写）
-    """
-    if not endpoint:
-        endpoint = view_class.__name__.lower()
-    app.add_url_rule(url_rule, view_func=view_class.as_view(endpoint))
-
-# -------------------------- 3. 具体页面视图类（继承 BasePageView）--------------------------
-# 首页视图类
-class IndexView(BasePageView):
-    def get_data(self):
-        # 只关注首页专属逻辑：查询所有板块
-        boards = Board.query.all()
-        board_list = [{
-            "id": board.id,
-            "name": board.name,
-            "description": board.description,
-            "create_time": board.create_time.strftime("%Y-%m-%d %H:%M:%S")
-        } for board in boards]
-        return {
-            "title": "复古论坛 - 首页",
-            "boards": board_list
-        }
-
-# 板块页面视图类
-class BoardView(BasePageView):
-    def get_data(self, board_id):
-        # 板块页专属逻辑：查询板块+帖子
-        board = Board.query.get_or_404(board_id)  # 不存在直接404
-        posts = Post.query.filter_by(board_id=board_id).order_by(Post.create_time.desc()).all()
-        
-        # 更新玩家已访问板块
-        player_id = session["player_id"]
-        player = PlayerStatus.query.get(player_id)
-        if board_id not in player.visited_boards:
-            player.visited_boards.append(board_id)
-            db.session.commit()
-        
-        # 更新帖子浏览量
-        for post in posts:
-            post.view_count += 1
-        db.session.commit()
-        
-        post_list = [{
-            "id": post.id,
-            "title": post.title,
-            "author": post.author,
-            "create_time": post.create_time.strftime("%Y-%m-%d %H:%M:%S"),
-            "view_count": post.view_count,
-            "reply_count": len(post.replies),
-            "board_id": post.board.id,
-            "board_name": post.board.name
-        } for post in posts]
-        
-        return {
-            "title": f"复古论坛 - {board.name}",
-            "board": {
-                "id": board.id,
-                "name": board.name,
-                "description": board.description
-            },
-            "posts": post_list
-        }
-
-# 帖子详情页视图类
-class PostView(BasePageView):
-    def get_data(self, post_id):
-        # 帖子页专属逻辑：查询帖子+回帖
-        post = Post.query.get_or_404(post_id)
-        replies = Reply.query.filter_by(post_id=post_id).order_by(Reply.create_time.asc()).all()
-        
-        # 更新玩家已访问帖子
-        player_id = session["player_id"]
-        player = PlayerStatus.query.get(player_id)
-        if post_id not in player.visited_posts:
-            player.visited_posts.append(post_id)
-            db.session.commit()
-        
-        # 更新帖子浏览量
-        post.view_count += 1
-        db.session.commit()
-        
-        reply_list = [{
-            "id": reply.id,
-            "content": reply.content,
-            "author": reply.author,
-            "signature": reply.signature,
-            "create_time": reply.create_time.strftime("%Y-%m-%d %H:%M:%S")
-        } for reply in replies]
-        
-        return {
-            "title": f"复古论坛 - {post.title}",
-            "post": {
-                "id": post.id,
-                "title": post.title,
-                "content": post.content,
-                "author": post.author,
-                "create_time": post.create_time.strftime("%Y-%m-%d %H:%M:%S"),
-                "view_count": post.view_count,
-                "board_name": post.board.name,
-                "board_id": post.board.id
-            },
-            "replies": reply_list
-        }
-    
-# 个人页面（查看用户发帖、回帖）
-class UserProfileView(BasePageView):
-    def get_data(self, author):
-        # 1. 查询该用户发布的帖子（按时间倒序）
-        user_posts = Post.query.filter_by(author=author).order_by(Post.create_time.desc()).all()
-        post_list = [{
-            "id": post.id,
-            "title": post.title,
-            "board_name": post.board.name,
-            "board_id": post.board.id,
-            "create_time": post.create_time.strftime("%Y-%m-%d %H:%M:%S"),
-            "view_count": post.view_count,
-            "reply_count": len(post.replies)
-        } for post in user_posts]
-
-        # 2. 查询该用户发布的回帖（按时间倒序）
-        user_replies = Reply.query.filter_by(author=author).order_by(Reply.create_time.desc()).all()
-        reply_list = [{
-            "id": reply.id,
-            "content": reply.content[:100] + "..." if len(reply.content) > 100 else reply.content,  # 截取前100字
-            "signature": reply.signature,
-            "post_title": reply.post.title,  # 回帖对应的帖子标题
-            "post_id": reply.post.id,  # 回帖对应的帖子ID（用于跳转）
-            "create_time": reply.create_time.strftime("%Y-%m-%d %H:%M:%S")
-        } for reply in user_replies]
-
-        return {
-            "title": f"复古论坛 - {author} 的个人主页",
-            "user_info": {
-                "author": author,
-                "post_count": len(post_list),  # 发帖数
-                "reply_count": len(reply_list)  # 回帖数
-            },
-            "posts": post_list,  # 发布的帖子
-            "replies": reply_list  # 发布的回帖
-        }
-    
-# 搜索接口视图类（返回JSON数据，供前端渲染）
-class SearchView(BasePageView):
-    def get_data(self):
-        # 获取前端传递的搜索参数
-        keyword = request.args.get('keyword', '').strip()
-        search_type = request.args.get('type', 'post')  # 默认搜索帖子
-
-        if not keyword:
-            return {
-                "results": [],
-                "keyword": keyword,
-                "type": search_type
-            }
-
-        # 1. 搜索帖子：模糊匹配标题或内容，关联板块信息
-        if search_type == 'post':
-            # 使用 LIKE 模糊查询（不区分大小写，适配不同数据库）
-            posts = Post.query.filter(
-                db.or_(
-                    Post.title.ilike(f'%{keyword}%'),
-                    Post.content.ilike(f'%{keyword}%')
-                )
-            ).order_by(Post.create_time.desc()).all()
-
-            results = [{
-                "id": post.id,
-                "title": post.title,
-                "content": post.content[:150] + "..." if len(post.content) > 150 else post.content,  # 截取前150字预览
-                "author": post.author,
-                "board_id": post.board.id,
-                "board_name": post.board.name,
-                "create_time": post.create_time.strftime("%Y-%m-%d %H:%M:%S"),
-                "view_count": post.view_count,
-                "reply_count": len(post.replies)
-            } for post in posts]
-
-        # 2. 搜索用户：模糊匹配作者名，去重并统计发帖/回帖数
-        elif search_type == 'user':
-            # 从帖子表和回帖表中查询匹配的作者名（去重）
-            post_authors = Post.query.filter(Post.author.ilike(f'%{keyword}%')).with_entities(Post.author).distinct()
-            reply_authors = Reply.query.filter(Reply.author.ilike(f'%{keyword}%')).with_entities(Reply.author).distinct()
-            
-            # 合并去重所有匹配的用户名
-            all_authors = set()
-            for author in post_authors:
-                all_authors.add(author[0])
-            for author in reply_authors:
-                all_authors.add(author[0])
-            all_authors = list(all_authors)
-
-            # 统计每个用户的发帖数和回帖数
-            results = []
-            for author in all_authors:
-                post_count = Post.query.filter_by(author=author).count()
-                reply_count = Reply.query.filter_by(author=author).count()
-                results.append({
-                    "author": author,
-                    "post_count": post_count,
-                    "reply_count": reply_count
-                })
-
-        # 其他类型默认返回空结果
-        else:
-            results = []
-
-        return {
-            "results": results,
-            "keyword": keyword,
-            "type": search_type
-        }
-    
-class SearchResultView(BasePageView):
-    def get_data(self):
-        return {
-            "title": "复古论坛 - 搜索结果"
-        }
-
-# 新人指南视图类
-class NewbieGuideView(BasePageView):
-    def get_data(self):
-        # 静态页面：只需返回标题
-        return {
-            "title": "复古论坛 - 新人指南"
-        }
-
-# 版规说明视图类
-class RulesView(BasePageView):
-    def get_data(self):
-        return {
-            "title": "复古论坛 - 版规说明"
-        }
-
-# 联系我们视图类
-class ContactView(BasePageView):
-    def get_data(self):
-        return {
-            "title": "复古论坛 - 联系我们"
-        }
-    
-# 动态页面类
-class DynamicPageView(BasePageView):
-    """通用动态页面视图类：匹配大模型生成的所有网页"""
-    def get_data(self, slug):
-        # 1. 查询动态页面（未启用或不存在则404）
-        dynamic_page = DynamicPage.query.filter_by(
-            slug=slug, 
-            is_active=True
-        ).first_or_404()  # 不存在直接返回404
-        
-        # 2. 返回页面数据（前端根据content_type渲染）
-        return {
-            "title": f"复古论坛 - {dynamic_page.title}",
-            "dynamic_page": {
-                "slug": dynamic_page.slug,
-                "title": dynamic_page.title,
-                "content": dynamic_page.content,
-                "content_type": dynamic_page.content_type,
-                "create_time": dynamic_page.create_time.strftime("%Y-%m-%d %H:%M:%S")
-            }
-        }
-
-# -------------------------- 4. 注册所有路由（用辅助函数简化）--------------------------
-register_page_route("/", IndexView)  # 首页
-register_page_route("/board/<int:board_id>", BoardView)  # 板块页
-register_page_route("/post/<int:post_id>", PostView)  # 帖子页
-register_page_route("/user/<author>", UserProfileView)  # 个人页面路由（放在动态页面之前）
-register_page_route("/api/search", SearchView)  # 搜索接口路由（API风格）
-register_page_route("/search", SearchResultView)  # 搜索结果页面路由（前端渲染用）
-register_page_route("/newbie", NewbieGuideView)  # 新人指南
-register_page_route("/rules", RulesView)  # 版规说明
-register_page_route("/contact", ContactView)  # 联系我们
-register_page_route("/page/<slug>", DynamicPageView)  # 路径格式：/page/xxx
-
-# -------------------------- 大模型生成页面接口（带鉴权） --------------------------
-# 接口鉴权装饰器
-def require_api_key(f):
-    @functools.wraps(f)
-    def wrapper(*args, **kwargs):
-        api_key = request.headers.get("X-API-Key")
-        if not api_key or api_key != app.config.get("API_KEY"):
-            return jsonify({"status": "error", "msg": "无权限访问（无效API密钥）"}), 403
-        return f(*args, **kwargs)
-    return wrapper
-
-# 大模型生成页面接口（简化后的逻辑，核心调用工具类）
-@app.route("/api/ai/generate-page", methods=["POST"])
-@require_api_key  # 保留原有鉴权装饰器
-def ai_generate_page():
-    """
-    大模型生成动态页面的接口（仅内部/管理员调用）
-    请求体：{"title": "页面标题", "content": "HTML/Markdown内容", "content_type": "html", "category": "tech"}
-    """
-    try:
-        data = request.get_json()
-        # 调用工具类的核心方法，创建动态页面
-        page_info = ai_page_generator.create_dynamic_page(
-            title=data.get("title"),
-            content=data.get("content"),
-            content_type=data.get("content_type", "html"),
-            category=data.get("category", "general"),
-            is_public=data.get("is_public", True)
-        )
-        return jsonify({
-            "status": "success",
-            "data": page_info
-        }), 201
-    except ValueError as e:
-        # 参数校验失败
-        return jsonify({"status": "error", "msg": str(e)}), 400
-    except SQLAlchemyError as e:
-        # 数据库存储失败
-        return jsonify({"status": "error", "msg": f"页面生成失败：{str(e)}"}), 500
-    except Exception as e:
-        # 其他未知异常
-        return jsonify({"status": "error", "msg": f"服务器错误：{str(e)}"}), 500
-
-# -------------------------- 5. 数据库初始化（保持不变）--------------------------
+# -------------------------- 数据库初始化（保持不变）--------------------------
 @app.cli.command("init-db")
 def init_db():
     db.drop_all()
@@ -452,9 +116,131 @@ def init_db():
     )
     db.session.add_all([reply1, reply2, reply3, reply4, reply5])
     db.session.commit()
+    
+    # 插入公司网站测试数据
+    import json
+    # 公司信息
+    company = CompanyInfo(
+        name="未来科技有限公司",
+        description="未来科技有限公司成立于2015年，是一家专注于软件开发、硬件设计和人工智能技术的高科技企业。我们致力于为客户提供最先进的技术解决方案，帮助客户在数字化时代取得成功。",
+        founded_year=2015,
+        address="北京市海淀区中关村科技园区",
+        phone="010-12345678",
+        email="contact@futuretech.com",
+        website="www.futuretech.com",
+        slogan="科技创造未来，创新引领时代",
+        logo_url="/static/images/logo.png"
+    )
+    db.session.add(company)
+    
+    # 产品分类
+    category1 = ProductCategory(
+        name="软件开发",
+        description="各种软件开发工具和平台",
+        order_num=1
+    )
+    category2 = ProductCategory(
+        name="硬件设备",
+        description="高性能硬件设备和解决方案",
+        order_num=2
+    )
+    category3 = ProductCategory(
+        name="人工智能",
+        description="AI技术和解决方案",
+        order_num=3
+    )
+    db.session.add_all([category1, category2, category3])
+    db.session.commit()
+    
+    # 产品数据
+    product1 = Product(
+        name="HX-400型处理器",
+        model="HX-400",
+        description="HX-400型处理器是本公司自主研发的高性能多核处理器，采用7nm工艺制程，专为服务器和高性能计算领域设计。该处理器具有出色的计算能力和能效比，可满足各种高负载应用场景的需求。",
+        features=json.dumps([
+            "8核心16线程设计，基础频率3.2GHz，最大睿频4.5GHz",
+            "7nm工艺制程，功耗仅为95W",
+            "支持DDR4-3600内存，最大内存容量可达512GB",
+            "集成PCIe 4.0控制器，支持64条PCIe通道",
+            "支持硬件级虚拟化和安全加密功能"
+        ]),
+        specifications=json.dumps({
+            "核心数": "8核心16线程",
+            "基础频率": "3.2GHz",
+            "最大睿频": "4.5GHz",
+            "工艺制程": "7nm",
+            "功耗": "95W TDP",
+            "内存支持": "DDR4-3600，最大512GB",
+            "PCIe版本": "PCIe 4.0 x64",
+            "封装": "LGA 4189"
+        }),
+        category_id=category2.id,
+        datasheet_url="/static/files/hx-400-datasheet.pdf",
+        image_url="/static/images/products/hx-400.jpg",
+        price=12999.00,
+        stock=30
+    )
+    
+    product2 = Product(
+        name="GS-2000系列服务器",
+        model="GS-2000",
+        description="GS-2000系列服务器是基于HX-400处理器开发的高性能服务器，采用2U机架式设计，支持双路处理器配置，适用于数据中心、云计算和高性能计算等场景。",
+        features=json.dumps([
+            "支持双路HX-400处理器，最大16核心32线程",
+            "24个DDR4内存插槽，最大内存容量可达1.5TB",
+            "支持8个NVMe SSD和12个SATA HDD",
+            "4个10Gbps以太网接口，支持链路聚合",
+            "冗余电源和风扇设计，提高系统可靠性"
+        ]),
+        specifications=json.dumps({
+            "处理器": "2×HX-400 8核心16线程",
+            "内存": "64GB DDR4-3600 (最高1.5TB)",
+            "存储": "2×1TB NVMe SSD + 4×4TB SATA HDD",
+            "网络": "4个10Gbps以太网接口",
+            "电源": "2×1200W冗余电源",
+            "尺寸": "2U机架式",
+            "重量": "25kg"
+        }),
+        category_id=category2.id,
+        datasheet_url="/static/files/gs-2000-datasheet.pdf",
+        image_url="/static/images/products/gs-2000.jpg",
+        price=39999.00,
+        stock=15
+    )
+    
+    product3 = Product(
+        name="GX-1000图形工作站",
+        model="GX-1000",
+        description="GX-1000图形工作站是专为设计师、工程师和内容创作者打造的高性能工作站，采用HX-400处理器和专业图形显卡，提供卓越的图形处理能力和计算性能。",
+        features=json.dumps([
+            "HX-400处理器，8核心16线程",
+            "NVIDIA RTX A6000专业图形显卡，48GB GDDR6显存",
+            "64GB DDR4-3600内存，支持扩展到256GB",
+            "2TB NVMe SSD + 4TB HDD存储组合",
+            "专业散热设计，确保长时间稳定运行"
+        ]),
+        specifications=json.dumps({
+            "处理器": "HX-400 8核心16线程",
+            "显卡": "NVIDIA RTX A6000 (48GB GDDR6)",
+            "内存": "64GB DDR4-3600",
+            "存储": "2TB NVMe SSD + 4TB HDD",
+            "接口": "USB 3.2 Gen2 ×6, Thunderbolt 4 ×2, DisplayPort 1.4 ×4",
+            "电源": "1500W 80+ Titanium",
+            "尺寸": "塔式，450×180×420mm"
+        }),
+        category_id=category2.id,
+        datasheet_url="/static/files/gx-1000-datasheet.pdf",
+        image_url="/static/images/products/gx-1000.jpg",
+        price=24999.00,
+        stock=20
+    )
+    
+    db.session.add_all([product1, product2, product3])
+    db.session.commit()
+    
     print("数据库初始化成功！测试数据已插入")
 
-# -------------------------- 6. 404页面（保持不变）--------------------------
+# -------------------------- 404页面（保持不变）--------------------------
 @app.errorhandler(404)
 def page_not_found(e):
     return make_response(jsonify({

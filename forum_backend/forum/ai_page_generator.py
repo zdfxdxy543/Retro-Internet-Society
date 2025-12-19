@@ -1,7 +1,7 @@
 from slugify import slugify
 import bleach
 import uuid
-from models import DynamicPage
+from .models import DynamicPage
 from sqlalchemy.exc import SQLAlchemyError
 
 class AIPageGenerator:

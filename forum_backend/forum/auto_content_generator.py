@@ -5,13 +5,16 @@ from datetime import datetime, timedelta
 from apscheduler.schedulers.blocking import BlockingScheduler
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+import os
 # 直接导入模型和原生SQLAlchemy的Base（无需Flask）
-from models import Board, Post, Reply
+from .models import Board, Post, Reply
 
 # -------------------------- 基础配置（必须手动填写，与项目一致）--------------------------
 # 数据库配置（关键！必须和项目config.py中的数据库地址完全一致）
-# 数据库配置（替换为你的绝对路径，处理反斜杠转义）
-DATABASE_URL = r"sqlite:///D:\Else\GreatGame\forum_backend\instance\forum.db"
+# 获取项目根目录
+app_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+db_path = os.path.join(app_root, 'instance', 'forum.db')
+DATABASE_URL = f"sqlite:///{db_path.replace(chr(92), '/')}"
 # 若用MySQL，需先安装依赖：pip install pymysql
 
 # 硅基流动API配置
@@ -247,48 +250,48 @@ def generate_replies():
         db.close()
 
 # -------------------------- 定时任务 --------------------------
-def main():
-    # 先验证数据库连接
-    if not test_db_connection():
-        return
-    
-    # 初始化定时任务（每个半点执行）
-    scheduler = BlockingScheduler(timezone="Asia/Shanghai")
-    scheduler.add_job(
-        func=lambda: [generate_new_posts(), generate_replies()],
-        trigger="cron",
-        minute="0,30",
-        id="auto_content_job",
-        name="半点自动发帖回复"
-    )
-    
-    # 启动日志
-    print("=" * 60)
-    print("🚀 自动内容生成服务启动成功（无Flask依赖）")
-    print(f"当前时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"配置：{NEW_POSTS_PER_RUN}帖/{REPLIES_PER_RUN}回复/次 | 24小时内回复 | 70%复用用户")
-    print(f"数据库：{DATABASE_URL}")
-    print("=" * 60)
-    
-    try:
-        scheduler.start()
-    except (KeyboardInterrupt, SystemExit):
-        print("⚠️  服务已停止")
-
-if __name__ == "__main__":
-    main()
-
-# -------------------------- 主程序入口 --------------------------
 # def main():
 #     # 先验证数据库连接
 #     if not test_db_connection():
 #         return
     
-#     # 只执行一次发帖和回帖
-#     generate_new_posts()  # 生成新帖子
-#     generate_replies()    # 生成回复
-#     print("✅ 已完成一次发帖和回帖，程序结束")
+#     # 初始化定时任务（每个半点执行）
+#     scheduler = BlockingScheduler(timezone="Asia/Shanghai")
+#     scheduler.add_job(
+#         func=lambda: [generate_new_posts(), generate_replies()],
+#         trigger="cron",
+#         minute="0,30",
+#         id="auto_content_job",
+#         name="半点自动发帖回复"
+#     )
+    
+#     # 启动日志
+#     print("=" * 60)
+#     print("🚀 自动内容生成服务启动成功（无Flask依赖）")
+#     print(f"当前时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+#     print(f"配置：{NEW_POSTS_PER_RUN}帖/{REPLIES_PER_RUN}回复/次 | 24小时内回复 | 70%复用用户")
+#     print(f"数据库：{DATABASE_URL}")
+#     print("=" * 60)
+    
+#     try:
+#         scheduler.start()
+#     except (KeyboardInterrupt, SystemExit):
+#         print("⚠️  服务已停止")
 
-# # 直接执行主函数（不再启动定时任务）
 # if __name__ == "__main__":
 #     main()
+
+# -------------------------- 主程序入口 --------------------------
+def main():
+    # 先验证数据库连接
+    if not test_db_connection():
+        return
+    
+    # 只执行一次发帖和回帖
+    generate_new_posts()  # 生成新帖子
+    generate_replies()    # 生成回复
+    print("✅ 已完成一次发帖和回帖，程序结束")
+
+# 直接执行主函数（不再启动定时任务）
+if __name__ == "__main__":
+    main()

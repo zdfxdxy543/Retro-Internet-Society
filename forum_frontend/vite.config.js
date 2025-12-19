@@ -22,7 +22,8 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:5000',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, '')
+        // 不要重写路径，因为后端API蓝图已经有/api前缀
+        // rewrite: (path) => path.replace(/^\/api/, '')
       }
     }
   },
@@ -38,3 +39,4 @@ export default defineConfig({
     }
   }
 })
+
