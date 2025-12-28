@@ -1,0 +1,10 @@
+Flask
+Flask-SQLAlchemy
+Flask-CORS
+Flask-Migrate
+python-dotenv
+slugify
+bleach
+requests
+reportlab
+beautifulsoup4

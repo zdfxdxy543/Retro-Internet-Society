@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API测试页面</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-container {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #5a6fd8;
+        }
+        pre {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            max-height: 300px;
+        }
+        input {
+            padding: 10px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>商家API测试工具</h1>
+    
+    <div class="test-container">
+        <h2>测试商家详情API</h2>
+        <input type="text" id="merchantId" placeholder="输入商家ID" value="1">
+        <button id="testMerchantBtn">测试商家详情</button>
+        <pre id="merchantResult">结果将显示在这里...</pre>
+    </div>
+
+    <script>
+        // 模拟axios请求
+        async function mockAxiosGet(url) {
+            try {
+                // 由于我们不能直接调用实际的API，这里创建模拟数据
+                const mockData = {
+                    '/api/shop/merchants/1': {
+                        success: true,
+                        data: {
+                            merchant: {
+                                id: 1,
+                                name: '优质电子商城',
+                                logo_url: '/static/images/merchant1.png',
+                                rating: 4.8,
+                                product_count: 120,
+                                service_years: 5,
+                                description: '专业销售各类电子产品的优质商家',
+                                address: '北京市朝阳区科技路100号',
+                                phone: '13800138000',
+                                email: 'contact@shop1.com'
+                            },
+                            products: [
+                                {
+                                    id: 1,
+                                    name: '智能手机',
+                                    description: '最新款智能手机，性能强劲',
+                                    price: 3999.00,
+                                    image_url: '/static/images/product1.png',
+                                    sales_count: 1234,
+                                    rating: 4.9,
+                                    category_id: 1,
+                                    is_featured: true
+                                },
+                                {
+                                    id: 2,
+                                    name: '平板电脑',
+                                    description: '轻薄便携，适合办公娱乐',
+                                    price: 2499.00,
+                                    image_url: '/static/images/product2.png',
+                                    sales_count: 567,
+                                    rating: 4.7,
+                                    category_id: 1,
+                                    is_featured: false
+                                }
+                            ]
+                        }
+                    }
+                };
+                
+                // 模拟网络延迟
+                await new Promise(resolve => setTimeout(resolve, 300));
+                
+                // 返回模拟数据
+                return { data: mockData[url] || { success: false, message: '未找到数据' } };
+            } catch (error) {
+                console.error('请求失败:', error);
+                throw error;
+            }
+        }
+        
+        // 模拟Vue组件中的fetchMerchant函数逻辑
+        async function testFetchMerchant(merchantId) {
+            document.getElementById('merchantResult').textContent = '加载中...';
+            
+            try {
+                // 模拟API调用
+                const response = await mockAxiosGet(`/api/shop/merchants/${merchantId}`);
+                
+                // 这是修复后的逻辑 - 适应拦截器返回response.data的情况
+                const data = response.data; // 这里模拟拦截器的行为
+                
+                console.log('API返回数据:', data);
+                
+                // 检查数据结构
+                if (data?.success && data.data?.merchant) {
+                    const merchant = data.data.merchant;
+                    const products = data.data.products || [];
+                    
+                    const result = {
+                        status: '成功',
+                        merchant: merchant,
+                        productCount: products.length,
+                        message: '商家数据加载成功！'
+                    };
+                    
+                    document.getElementById('merchantResult').textContent = JSON.stringify(result, null, 2);
+                    return result;
+                } else {
+                    const error = {
+                        status: '失败',
+                        message: '商家不存在或数据格式不正确',
+                        data: data
+                    };
+                    
+                    document.getElementById('merchantResult').textContent = JSON.stringify(error, null, 2);
+                    return error;
+                }
+            } catch (error) {
+                const errorInfo = {
+                    status: '异常',
+                    message: '获取商家详情失败',
+                    error: error.message
+                };
+                
+                document.getElementById('merchantResult').textContent = JSON.stringify(errorInfo, null, 2);
+                return errorInfo;
+            }
+        }
+        
+        // 绑定测试按钮事件
+        document.getElementById('testMerchantBtn').addEventListener('click', () => {
+            const merchantId = document.getElementById('merchantId').value;
+            testFetchMerchant(merchantId);
+        });
+        
+        // 页面加载时自动测试
+        window.addEventListener('load', () => {
+            testFetchMerchant(1);
+        });
+    </script>
+</body>
+</html>

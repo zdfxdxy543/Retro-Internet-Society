@@ -1,0 +1,3 @@
+2025-12-26 20:12:45,971 - shop_maintenance - ERROR - 执行商城维护任务时出错: cannot import name 'create_app' from 'app' (E:\Else\VideoGame\GreatGame\onlineworld_backend\app.py)
+2025-12-26 20:13:56,896 - shop_maintenance - INFO - 开始执行商城维护任务
+2025-12-26 20:13:56,914 - shop_maintenance - ERROR - 执行商城维护任务时出错: Entity namespace for "shop_category" has no property "active"
