@@ -55,13 +55,13 @@ class ShopAIGenerator:
         for attempt in range(retries):
             try:
                 data = {
-                    "model": "gpt-3.5-turbo",
+                    "model": "Pro/deepseek-ai/DeepSeek-V3.2-Exp",
                     "messages": [{"role": "user", "content": prompt}],
                     "temperature": 0.7
                 }
                 
                 print(f"[API调用] 尝试生成{category_name}类商品... (尝试 {attempt+1}/{retries})")
-                response = requests.post(self.api_url, headers=headers, json=data, timeout=10)
+                response = requests.post(self.api_url, headers=headers, json=data, timeout=60)
                 
                 if response.status_code == 200:
                     result = response.json()
