@@ -2,7 +2,11 @@ from datetime import datetime, timedelta
 import random
 import json
 import requests
+import os
 from config import Config
+
+# 导入图像生成模块
+from image_generator import generate_image
 
 class ShopAIGenerator:
     def __init__(self, db, config=None):
@@ -14,6 +18,11 @@ class ShopAIGenerator:
         self.test_mode = self.config.get('TEST_MODE', Config.TEST_MODE)
         # 从配置中获取模型名称
         self.model_name = self.config.get('AI_MODEL_NAME', Config.AI_MODEL_NAME)
+        # 图像生成配置
+        self.image_width = self.config.get('IMAGE_WIDTH', 512)
+        self.image_height = self.config.get('IMAGE_HEIGHT', 512)
+        # 控制是否生成图片
+        self.generate_images = self.config.get('GENERATE_IMAGES', True)
         
     def get_merchant_names_from_forum(self, limit=20):
         """从论坛数据中提取商家名称"""
@@ -85,6 +94,58 @@ class ShopAIGenerator:
                 
         return default_data  # 多次尝试失败后返回默认数据
     
+    def generate_product_image(self, product_name, description, category_name):
+        """
+        为商品生成图片
+        
+        参数:
+            product_name (str): 商品名称
+            description (str): 商品描述
+            category_name (str): 商品分类
+            
+        返回:
+            str: 图片的相对URL路径，用于存储到数据库
+        """
+        # 如果不生成图片或者处于测试模式，则返回None
+        if not self.generate_images or self.test_mode:
+            print(f"[图像生成] 跳过图片生成 (测试模式或禁用图片生成)")
+            return None
+            
+        try:
+            # 构建适合图像生成的提示词
+            # 从描述中提取关键词，最多取前50个字符作为提示词的一部分
+            short_desc = description[:50] + '...' if len(description) > 50 else description
+            prompt = f"二手{category_name}商品: {product_name}, {short_desc}"
+            
+            print(f"[图像生成] 为商品 '{product_name}' 生成图片...")
+            
+            # 调用图像生成函数
+            image_path = generate_image(
+                prompt=prompt,
+                width=self.image_width,
+                height=self.image_height
+            )
+            
+            # 将完整路径转换为相对URL路径
+            # 假设图片保存在static/images目录下
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+            static_dir = os.path.join(base_dir, 'static')
+            
+            if image_path.startswith(static_dir):
+                # 获取文件名部分（去掉完整路径）
+                image_filename = os.path.basename(image_path)
+                # 生成指向通用API端点的URL
+                image_url = f'/api/images/{image_filename}'
+                print(f"[图像生成] 图片URL: {image_url}")
+                return image_url
+            else:
+                print(f"[图像生成] 无法转换图片路径为URL: {image_path}")
+                return None
+                
+        except Exception as e:
+            print(f"[图像生成] 生成图片时出错: {str(e)}")
+            return None
+    
     def ensure_merchant_exists(self, merchant_name):
         """确保商家存在，如果不存在则创建"""
         from forum.models import ShopMerchant
@@ -113,19 +174,41 @@ class ShopAIGenerator:
         from forum.models import ShopProduct
         
         try:
+            # 创建商品记录
             product = ShopProduct(
                 name=product_data['name'],
                 description=product_data['description'],
                 price=product_data['price'],
                 merchant_id=merchant.id,
                 category_id=category.id,
-                is_active=True
+                is_active=True,
+                tags=product_data.get('tags', [])
             )
             
             self.db.session.add(product)
             self.db.session.commit()
             print(f"创建新商品: {product_data['name']}")
+            
+            # 尝试为商品生成图片
+            if self.generate_images:
+                image_url = self.generate_product_image(
+                    product_name=product_data['name'],
+                    description=product_data['description'],
+                    category_name=category.name
+                )
+                
+                # 如果成功生成了图片，更新商品的image_url字段
+                if image_url:
+                    try:
+                        product.image_url = image_url
+                        self.db.session.commit()
+                        print(f"更新商品图片URL: {image_url}")
+                    except Exception as e:
+                        self.db.session.rollback()
+                        print(f"更新商品图片URL时出错: {str(e)}")
+            
             return product
+            
         except Exception as e:
             self.db.session.rollback()
             print(f"创建商品时出错: {str(e)}")
@@ -149,7 +232,7 @@ class ShopAIGenerator:
             print("没有可用的商品分类")
             return []
         
-        for _ in range(count):
+        for i in range(count):
             # 随机选择分类和商家
             category = random.choice(categories)
             merchant_name = random.choice(merchant_names)
@@ -166,6 +249,11 @@ class ShopAIGenerator:
             product = self.create_product(product_data, merchant, category)
             if product:
                 new_products.append(product)
+                # 每生成5个商品后暂停一小段时间，避免API限流
+                if (i + 1) % 5 == 0 and i + 1 < count:
+                    print(f"已生成 {i + 1} 个商品，休息2秒...")
+                    import time
+                    time.sleep(2)
         
         return new_products
     

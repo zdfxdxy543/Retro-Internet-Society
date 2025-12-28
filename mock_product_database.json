@@ -1,0 +1,35 @@
+[
+  {
+    "id": "6f24cee2-a463-4dcd-a003-e09feabfe3b2",
+    "name": "\u6d4b\u8bd5\u5546\u54c1_4d15135b",
+    "description": "\u8fd9\u662f\u4e00\u4e2a\u6d4b\u8bd5\u5546\u54c1\u63cf\u8ff0 - \u6d4b\u8bd5\u5546\u54c1_4d15135b",
+    "price": 99.99,
+    "stock": 10,
+    "category_id": 1,
+    "category_name": "\u7535\u5b50\u4ea7\u54c1",
+    "image_url": "/static/images/test_product_20251228_160853_537.png",
+    "created_at": "2025-12-28T16:08:53.537401"
+  },
+  {
+    "id": "a3ac76d4-a397-48d4-bfb6-c56cd60ca06e",
+    "name": "\u6d4b\u8bd5\u5546\u54c1_56458521",
+    "description": "\u8fd9\u662f\u4e00\u4e2a\u6d4b\u8bd5\u5546\u54c1\u63cf\u8ff0 - \u6d4b\u8bd5\u5546\u54c1_56458521",
+    "price": 99.99,
+    "stock": 10,
+    "category_id": 1,
+    "category_name": "\u7535\u5b50\u4ea7\u54c1",
+    "image_url": "/static/images/test_product_20251228_160854_539.png",
+    "created_at": "2025-12-28T16:08:54.539512"
+  },
+  {
+    "id": "6aeaf386-873e-47d3-abb0-7a450ea9489f",
+    "name": "\u6d4b\u8bd5\u5546\u54c1_00a879a6",
+    "description": "\u8fd9\u662f\u4e00\u4e2a\u6d4b\u8bd5\u5546\u54c1\u63cf\u8ff0 - \u6d4b\u8bd5\u5546\u54c1_00a879a6",
+    "price": 99.99,
+    "stock": 10,
+    "category_id": 1,
+    "category_name": "\u7535\u5b50\u4ea7\u54c1",
+    "image_url": "/static/images/test_product_20251228_160855_542.png",
+    "created_at": "2025-12-28T16:08:55.542222"
+  }
+]

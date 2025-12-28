@@ -1,4 +1,5 @@
-from flask import Blueprint, request, jsonify, make_response
+from flask import Blueprint, request, jsonify, make_response, send_file
+import os
 from .base import BasePageView, register_page_route, require_api_key
 from ..models import Post, Reply, db
 from flask import current_app
@@ -400,3 +401,27 @@ def download_datasheet(product_id):
             "status": "error",
             "message": f"下载DataSheet失败：{str(e)}"
         }), 500
+
+
+@api_bp.route("/images/<path:image_filename>", methods=["GET"])
+def get_image(image_filename):
+    """
+    通用图片访问API端点
+    根据文件名从static/images目录中提供图片文件
+    可以被网站的任何部分调用，而不仅限于商城功能
+    """
+    try:
+        # 获取图片存储的基础路径
+        static_dir = os.path.join(current_app.root_path, 'static')
+        image_path = os.path.join(static_dir, 'images', image_filename)
+        
+        # 验证图片文件是否存在
+        if not os.path.exists(image_path) or not os.path.isfile(image_path):
+            return jsonify({"error": "图片文件不存在"}), 404
+        
+        # 发送图片文件
+        return send_file(image_path, as_attachment=False)
+        
+    except Exception as e:
+        current_app.logger.error(f"图片访问API错误: {str(e)}")
+        return jsonify({"error": "服务器内部错误"}), 500

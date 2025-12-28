@@ -22,10 +22,12 @@ class Config:
     # 硅基流动API配置
     SILICON_FLOW_API_KEY = os.getenv("SILICON_FLOW_API_KEY", "sk-vxnqqulpbrduxkhpxmsfebvhyvwdxjebofqcjtdsjrggebvv")
     SILICON_FLOW_API_URL = os.getenv("SILICON_FLOW_API_URL", "https://api.siliconflow.cn/v1/chat/completions")
+    SILICON_FLOW_IMAGE_API_URL = os.getenv("SILICON_FLOW_IMAGE_API_URL", "https://api.siliconflow.cn/v1/images/generations")
     # 兼容旧版变量名
     SILICONFLOW_API_KEY = SILICON_FLOW_API_KEY  # 兼容ai_content_generator.py中的命名
     SILICONFLOW_API_URL = SILICON_FLOW_API_URL  # 兼容ai_content_generator.py中的命名
     AI_MODEL_NAME = os.getenv("AI_MODEL_NAME", "Pro/deepseek-ai/DeepSeek-V3.2-Exp")
+    AI_IMAGE_MODEL_NAME = os.getenv("AI_IMAGE_MODEL_NAME", "Kwai-Kolors/Kolors")
     # 测试模式标志，用于控制是否使用真实API
     TEST_MODE = os.getenv("TEST_MODE", "False").lower() in ('true', '1', 't', 'yes')
 

@@ -11,6 +11,7 @@ from forum.models import Board, Post, Reply
 from ai_tools import tool_registry
 # 导入配置
 from config import Config
+from apscheduler.schedulers.blocking import BlockingScheduler
 
 # -------------------------- 基础配置（从config.py获取）--------------------------
 # 数据库配置（使用与项目config.py相同的配置）
@@ -598,31 +599,62 @@ def generate_replies():
         db.close()
 
 # -------------------------- 主程序入口 --------------------------
-def main():
-    # 导入Flask应用和数据库实例
-    from app import app, db
+# def main():
+#     # 导入Flask应用和数据库实例
+#     from app import app, db
     
-    # 创建并推送Flask应用上下文
-    with app.app_context():
-        # 先验证数据库连接
-        if not test_db_connection():
-            return
+#     # 创建并推送Flask应用上下文
+#     with app.app_context():
+#         # 先验证数据库连接
+#         if not test_db_connection():
+#             return
         
-        print("🚀 启动AI内容生成器（支持工具调用）")
-        print("可用工具：")
-        for tool in tool_registry.list_tools():
-            print(f"  - {tool.name()}: {tool.description()}")
+#         print("🚀 启动AI内容生成器（支持工具调用）")
+#         print("可用工具：")
+#         for tool in tool_registry.list_tools():
+#             print(f"  - {tool.name()}: {tool.description()}")
         
-        # 执行发帖（暂时注释掉，只测试回帖）
-        print("\n📝 开始生成新帖子...")
-        # generate_new_posts()  # 生成新帖子
+#         # 执行发帖（暂时注释掉，只测试回帖）
+#         print("\n📝 开始生成新帖子...")
+#         # generate_new_posts()  # 生成新帖子
         
-        # 执行回帖
-        print("\n💬 开始生成回复...")
-        generate_replies()    # 生成回复
+#         # 执行回帖
+#         print("\n💬 开始生成回复...")
+#         generate_replies()    # 生成回复
         
-        print("\n✅ 已完成回帖，程序结束")
+#         print("\n✅ 已完成回帖，程序结束")
 
-# 直接执行主函数
+# # 直接执行主函数
+# if __name__ == "__main__":
+#     main()
+
+def main():
+    # 先验证数据库连接
+    if not test_db_connection():
+        return
+    
+    # 初始化定时任务（每个半点执行）
+    scheduler = BlockingScheduler(timezone="Asia/Shanghai")
+    scheduler.add_job(
+        func=lambda: [generate_new_posts(), generate_replies()],
+        trigger="cron",
+        minute="0,30",
+        id="auto_content_job",
+        name="半点自动发帖回复"
+    )
+    
+    # 启动日志
+    print("=" * 60)
+    print("🚀 自动内容生成服务启动成功（无Flask依赖）")
+    print(f"当前时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"配置：{NEW_POSTS_PER_RUN}帖/{REPLIES_PER_RUN}回复/次 | 24小时内回复 | 70%复用用户")
+    print(f"数据库：{DATABASE_URL}")
+    print("=" * 60)
+    
+    try:
+        scheduler.start()
+    except (KeyboardInterrupt, SystemExit):
+        print("⚠️  服务已停止")
+
 if __name__ == "__main__":
     main()

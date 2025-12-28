@@ -9,3 +9,31 @@
 2025-12-28 13:01:44,305 - shop_auto_manager - INFO - 商城自动管理任务已启动
 2025-12-28 13:01:44,751 - shop_auto_manager - INFO - 商品下架任务执行完成: {'success': True, 'deactivated_count': 3, 'message': '成功下架 3 个商品'}
 2025-12-28 13:02:53,187 - shop_auto_manager - INFO - 商品生成任务执行完成: [<ShopProduct 优质苹果>, <ShopProduct 二手Apple iPhone 12>, <ShopProduct 有机苹果>, <ShopProduct 二手进口车厘子礼盒>, <ShopProduct 二手Apple AirPods Pro>]
+2025-12-28 15:51:00,165 - shop_auto_manager - INFO - 开始执行商品生成任务
+2025-12-28 15:51:00,165 - shop_auto_manager - INFO - 开始执行商品下架任务
+2025-12-28 15:51:00,165 - shop_auto_manager - INFO - 商城自动管理任务已启动
+2025-12-28 15:51:00,644 - shop_auto_manager - INFO - 商品下架任务执行完成: {'success': True, 'deactivated_count': 3, 'message': '成功下架 3 个商品'}
+2025-12-28 15:52:14,930 - shop_auto_manager - INFO - 商品生成任务执行完成: [<ShopProduct 天猫旗舰店二手进口三文鱼刺身拼盘>, <ShopProduct 二手Apple iPhone 12 128GB>, <ShopProduct 优品折扣二手进口红酒>, <ShopProduct 未开封进口巧克力礼盒>, <ShopProduct 二手实木书桌>]
+2025-12-28 15:52:26,746 - shop_auto_manager - INFO - 商城自动管理任务已停止
+2025-12-28 15:58:14,442 - shop_auto_manager - INFO - 开始执行商品生成任务
+2025-12-28 15:58:14,442 - shop_auto_manager - INFO - 开始执行商品下架任务
+2025-12-28 15:58:14,442 - shop_auto_manager - INFO - 商城自动管理任务已启动
+2025-12-28 15:58:14,900 - shop_auto_manager - ERROR - 执行商品生成任务时出错: name 'logger' is not defined
+2025-12-28 15:58:14,933 - shop_auto_manager - INFO - 商品下架任务执行完成: {'success': True, 'deactivated_count': 3, 'message': '成功下架 3 个商品'}
+2025-12-28 15:58:30,004 - shop_auto_manager - INFO - 商城自动管理任务已停止
+2025-12-28 15:58:39,491 - shop_auto_manager - INFO - 开始执行商品生成任务
+2025-12-28 15:58:39,491 - shop_auto_manager - INFO - 开始执行商品下架任务
+2025-12-28 15:58:39,491 - shop_auto_manager - INFO - 商城自动管理任务已启动
+2025-12-28 15:58:39,973 - shop_auto_manager - INFO - 商品下架任务执行完成: {'success': True, 'deactivated_count': 3, 'message': '成功下架 3 个商品'}
+2025-12-28 15:59:07,676 - shop_auto_manager - INFO - 商城自动管理任务已停止
+2025-12-28 16:10:00,939 - shop_auto_manager - INFO - 开始执行商品生成任务
+2025-12-28 16:10:00,939 - shop_auto_manager - INFO - 开始执行商品下架任务
+2025-12-28 16:10:00,939 - shop_auto_manager - INFO - 商城自动管理任务已启动
+2025-12-28 16:10:01,419 - shop_auto_manager - INFO - 商品下架任务执行完成: {'success': True, 'deactivated_count': 3, 'message': '成功下架 3 个商品'}
+2025-12-28 16:10:43,965 - shop_auto_manager - INFO - 商城自动管理任务已停止
+2025-12-28 16:29:34,666 - shop_auto_manager - INFO - 开始执行商品生成任务
+2025-12-28 16:29:34,667 - shop_auto_manager - INFO - 开始执行商品下架任务
+2025-12-28 16:29:34,667 - shop_auto_manager - INFO - 商城自动管理任务已启动
+2025-12-28 16:29:35,162 - shop_auto_manager - INFO - 商品下架任务执行完成: {'success': True, 'deactivated_count': 3, 'message': '成功下架 3 个商品'}
+2025-12-28 16:31:21,377 - shop_auto_manager - INFO - 商品生成任务执行完成: [<ShopProduct 二手有机蜂蜜>, <ShopProduct 复古女士手提包>, <ShopProduct 进口有机水果篮（二手）>, <ShopProduct 二手兰蔻粉底液>, <ShopProduct 雅诗兰黛持妆粉底液>]
+2025-12-28 17:52:26,752 - shop_auto_manager - INFO - 商城自动管理任务已停止
