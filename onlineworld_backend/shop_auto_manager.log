@@ -1,0 +1,11 @@
+2025-12-28 12:52:32,691 - shop_auto_manager - INFO - 开始执行商品生成任务
+2025-12-28 12:52:32,691 - shop_auto_manager - INFO - 开始执行商品下架任务
+2025-12-28 12:52:32,691 - shop_auto_manager - INFO - 商城自动管理任务已启动
+2025-12-28 12:52:33,121 - shop_auto_manager - INFO - 商品下架任务执行完成: {'success': True, 'deactivated_count': 0, 'message': '成功下架 0 个商品'}
+2025-12-28 12:52:33,121 - shop_auto_manager - INFO - 商品生成任务执行完成: []
+2025-12-28 12:52:50,556 - shop_auto_manager - INFO - 商城自动管理任务已停止
+2025-12-28 13:01:44,305 - shop_auto_manager - INFO - 开始执行商品生成任务
+2025-12-28 13:01:44,305 - shop_auto_manager - INFO - 开始执行商品下架任务
+2025-12-28 13:01:44,305 - shop_auto_manager - INFO - 商城自动管理任务已启动
+2025-12-28 13:01:44,751 - shop_auto_manager - INFO - 商品下架任务执行完成: {'success': True, 'deactivated_count': 3, 'message': '成功下架 3 个商品'}
+2025-12-28 13:02:53,187 - shop_auto_manager - INFO - 商品生成任务执行完成: [<ShopProduct 优质苹果>, <ShopProduct 二手Apple iPhone 12>, <ShopProduct 有机苹果>, <ShopProduct 二手进口车厘子礼盒>, <ShopProduct 二手Apple AirPods Pro>]

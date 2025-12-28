@@ -24,6 +24,35 @@ export default defineConfig({
         changeOrigin: true,
         // 不要重写路径，因为后端API蓝图已经有/api前缀
         // rewrite: (path) => path.replace(/^\/api/, '')
+      },
+      // 代理邮箱系统API调用，但保留前端路由功能
+      '/email/register': {
+        target: 'http://localhost:5000',
+        changeOrigin: true
+      },
+      '/email/login': {
+        target: 'http://localhost:5000',
+        changeOrigin: true
+      },
+      '/email/logout': {
+        target: 'http://localhost:5000',
+        changeOrigin: true
+      },
+      '/email/status': {
+        target: 'http://localhost:5000',
+        changeOrigin: true
+      },
+      '/email/send': {
+        target: 'http://localhost:5000',
+        changeOrigin: true
+      },
+      '/email/inbox': {
+        target: 'http://localhost:5000',
+        changeOrigin: true
+      },
+      '/email/outbox': {
+        target: 'http://localhost:5000',
+        changeOrigin: true
       }
     }
   },
@@ -39,4 +68,3 @@ export default defineConfig({
     }
   }
 })
-

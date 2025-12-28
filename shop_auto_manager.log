@@ -14,3 +14,8 @@
 2025-12-28 12:25:47,859 - shop_auto_manager - INFO - 商品下架任务执行完成: {'success': True, 'deactivated_count': 3, 'message': '成功下架 3 个商品'}
 2025-12-28 12:26:56,282 - shop_auto_manager - INFO - 商品生成任务执行完成: [<ShopProduct 二手实木书桌>, <ShopProduct 二手苹果AirPods Pro>, <ShopProduct 优品折扣有机苹果>, <ShopProduct 二手苹果AirPods Pro蓝牙耳机>, <ShopProduct 二手男士运动鞋>]
 2025-12-28 12:27:39,598 - shop_auto_manager - INFO - 商城自动管理任务已停止
+2025-12-28 12:58:29,414 - shop_auto_manager - INFO - 开始执行商品生成任务
+2025-12-28 12:58:29,414 - shop_auto_manager - INFO - 开始执行商品下架任务
+2025-12-28 12:58:29,414 - shop_auto_manager - INFO - 商城自动管理任务已启动
+2025-12-28 12:58:29,843 - shop_auto_manager - INFO - 商品下架任务执行完成: {'success': True, 'deactivated_count': 0, 'message': '成功下架 0 个商品'}
+2025-12-28 12:58:29,843 - shop_auto_manager - INFO - 商品生成任务执行完成: []

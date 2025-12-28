@@ -260,7 +260,84 @@ class AIMapEvent(db.Model):
             'is_active': self.is_active
         }
 
-# ===================== 独立商城系统模型 =====================
+# ===================== 邮箱系统模型 =====================
+
+class MailUser(db.Model):
+    """邮箱系统用户模型"""
+    __tablename__ = 'mail_user'
+    
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    username = db.Column(db.String(50), unique=True, nullable=False)  # 用户名（用于登录）
+    email = db.Column(db.String(100), unique=True, nullable=False)  # 邮箱地址
+    password = db.Column(db.String(255), nullable=False)  # 加密后的密码
+    display_name = db.Column(db.String(100))  # 显示名称
+    avatar_url = db.Column(db.String(200))  # 头像地址
+    is_active = db.Column(db.Boolean, default=True)  # 是否激活
+    create_time = db.Column(db.DateTime, default=datetime.utcnow)  # 创建时间
+    update_time = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)  # 更新时间
+    
+    # 关联发出的邮件（一对多）
+    sent_emails = db.relationship('Mail', backref='sender', foreign_keys='Mail.sender_id', lazy=True)
+    
+    def __repr__(self):
+        return f"<MailUser {self.username} ({self.email})>"
+    
+    def to_dict(self):
+        """转换为字典格式"""
+        return {
+            "id": self.id,
+            "username": self.username,
+            "email": self.email,
+            "display_name": self.display_name or self.username,
+            "avatar_url": self.avatar_url,
+            "is_active": self.is_active,
+            "create_time": self.create_time.strftime("%Y-%m-%d %H:%M:%S")
+        }
+
+class Mail(db.Model):
+    """邮件模型"""
+    __tablename__ = 'mail'
+    
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    sender_id = db.Column(db.Integer, db.ForeignKey('mail_user.id'), nullable=False)  # 发件人ID
+    recipient_id = db.Column(db.Integer, db.ForeignKey('mail_user.id'), nullable=False)  # 收件人ID
+    subject = db.Column(db.String(200), nullable=False)  # 邮件主题
+    content = db.Column(db.Text, nullable=False)  # 邮件内容
+    is_read = db.Column(db.Boolean, default=False)  # 是否已读（收件人视角）
+    is_starred = db.Column(db.Boolean, default=False)  # 是否星标（收件人视角）
+    is_deleted = db.Column(db.Boolean, default=False)  # 是否已删除
+    delete_by = db.Column(db.String(20))  # 由谁删除：'sender', 'recipient', 或 'both'
+    has_attachment = db.Column(db.Boolean, default=False)  # 是否有附件
+    attachments = db.Column(db.JSON, default=list)  # 附件信息（JSON格式）
+    create_time = db.Column(db.DateTime, default=datetime.utcnow)  # 发送时间
+    
+    # 收件人关系
+    recipient = db.relationship('MailUser', backref='received_emails', foreign_keys=[recipient_id])
+    
+    def __repr__(self):
+        return f"<Mail {self.subject} from {self.sender_id} to {self.recipient_id}>"
+    
+    def to_dict(self):
+        """转换为字典格式"""
+        return {
+            "id": self.id,
+            "sender_id": self.sender_id,
+            "sender_name": self.sender.username if self.sender else "未知用户",
+            "sender_email": self.sender.email if self.sender else "",
+            "recipient_id": self.recipient_id,
+            "recipient_name": self.recipient.username if self.recipient else "未知用户",
+            "recipient_email": self.recipient.email if self.recipient else "",
+            "subject": self.subject,
+            "content": self.content,
+            "is_read": self.is_read,
+            "is_starred": self.is_starred,
+            "is_deleted": self.is_deleted,
+            "delete_by": self.delete_by,
+            "has_attachment": self.has_attachment,
+            "attachments": self.attachments or [],
+            "create_time": self.create_time.strftime("%Y-%m-%d %H:%M:%S")
+        }
+
 # 完全解耦，不与现有CompanyInfo、Product等关联
 
 class ShopCategory(db.Model):

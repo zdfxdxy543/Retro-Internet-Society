@@ -2,15 +2,18 @@ from datetime import datetime, timedelta
 import random
 import json
 import requests
+from config import Config
 
 class ShopAIGenerator:
     def __init__(self, db, config=None):
         self.db = db
         self.config = config or {}
-        self.api_key = self.config.get('SILICON_FLOW_API_KEY', 'sk-vxnqqulpbrduxkhpxmsfebvhyvwdxjebofqcjtdsjrggebvv')
-        self.api_url = "https://api.siliconflow.cn/v1/chat/completions"
+        self.api_key = self.config.get('SILICON_FLOW_API_KEY', Config.SILICON_FLOW_API_KEY)
+        self.api_url = self.config.get('SILICON_FLOW_API_URL', Config.SILICON_FLOW_API_URL)
         # 添加一个测试模式标志，用于控制是否使用真实API
-        self.test_mode = self.config.get('TEST_MODE', False)
+        self.test_mode = self.config.get('TEST_MODE', Config.TEST_MODE)
+        # 从配置中获取模型名称
+        self.model_name = self.config.get('AI_MODEL_NAME', Config.AI_MODEL_NAME)
         
     def get_merchant_names_from_forum(self, limit=20):
         """从论坛数据中提取商家名称"""
@@ -55,7 +58,7 @@ class ShopAIGenerator:
         for attempt in range(retries):
             try:
                 data = {
-                    "model": "Pro/deepseek-ai/DeepSeek-V3.2-Exp",
+                    "model": self.model_name,
                     "messages": [{"role": "user", "content": prompt}],
                     "temperature": 0.7
                 }

@@ -9,19 +9,17 @@ from sqlalchemy.orm import sessionmaker
 from forum.models import Board, Post, Reply
 # 导入工具系统
 from ai_tools import tool_registry
+# 导入配置
+from config import Config
 
-# -------------------------- 基础配置（必须手动填写，与项目一致）--------------------------
-# 数据库配置（使用与项目config.py相同的方式生成）
-import os
-app_root = os.path.dirname(os.path.abspath(__file__))
-db_path = os.path.join(app_root, 'instance', 'forum.db')
-DATABASE_URL = f"sqlite:///{db_path.replace(chr(92), '/')}"
-# 若用MySQL，需先安装依赖：pip install pymysql
+# -------------------------- 基础配置（从config.py获取）--------------------------
+# 数据库配置（使用与项目config.py相同的配置）
+DATABASE_URL = Config.SQLALCHEMY_DATABASE_URI
 
 # 硅基流动API配置
-SILICONFLOW_API_KEY = "sk-vxnqqulpbrduxkhpxmsfebvhyvwdxjebofqcjtdsjrggebvv"  # 替换为你的API密钥
-SILICONFLOW_API_URL = "https://api.siliconflow.cn/v1/chat/completions"
-MODEL_NAME = "Pro/deepseek-ai/DeepSeek-V3.2-Exp"  # 硅基流动支持的模型（如glm-4、llama3-8b）
+SILICONFLOW_API_KEY = Config.SILICONFLOW_API_KEY
+SILICONFLOW_API_URL = Config.SILICONFLOW_API_URL
+MODEL_NAME = Config.AI_MODEL_NAME
 
 # 发帖/回复配置
 NEW_POSTS_PER_RUN = 1  # 增加到每次运行生成5个新帖子

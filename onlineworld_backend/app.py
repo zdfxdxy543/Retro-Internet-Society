@@ -26,8 +26,8 @@ app.config["ALLOWED_HTML_TAGS"] = ["div", "p", "h2", "h3", "h4", "ul", "li", "a"
 app.config["ALLOWED_HTML_ATTRS"] = {"a": ["href", "target", "rel"], "code": ["class"]}
 app.config["API_KEY"] = "your-secret-key-123456"  # 请替换为你的实际密钥（重要！）
 
-# 启用CORS
-CORS(app, supports_credentials=True)
+# 启用CORS，增加对/email路径的明确支持
+CORS(app, origins=['http://localhost:8080'], supports_credentials=True, allow_headers=['Content-Type', 'Authorization'])
 
 # 初始化数据库
 import os
@@ -37,6 +37,10 @@ app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL') or f'sqli
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production'
 db.init_app(app)
+
+# 确保邮箱系统数据表被创建
+with app.app_context():
+    db.create_all()
 
 # -------------------------- 导入并注册所有蓝图 --------------------------
 # 导入蓝图
@@ -49,12 +53,15 @@ from forum.blueprints.company_pages import api_bp  # 注意：这里不需要导
 from forum.blueprints.ai_map import api_bp  # AI地图路由也注册到api_bp中
 # 导入商城模块
 from forum.blueprints.shop import shop_bp  # 商城路由注册到shop_bp中
+# 导入邮箱模块
+from forum.blueprints.email import email_bp  # 邮箱路由注册到email_bp中
 
 # 注册蓝图
 app.register_blueprint(forum_bp)  # 论坛页面路由，前缀 /forum
 app.register_blueprint(api_bp)     # API路由，前缀 /api
 app.register_blueprint(user_bp)    # 用户相关路由，前缀 /user
 app.register_blueprint(shop_bp)    # 商城路由，前缀 /shop
+app.register_blueprint(email_bp)    # 邮箱路由，前缀 /email
 # 移除对company_bp的注册，因为公司网站路由现在已经注册到api_bp中了
 # app.register_blueprint(company_bp)  # 公司网站路由，前缀 /company
 
