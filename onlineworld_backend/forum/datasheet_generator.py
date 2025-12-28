@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 import requests
 from flask import current_app, jsonify, send_file
@@ -12,13 +13,12 @@ from reportlab.pdfbase.ttfonts import TTFont
 from dotenv import load_dotenv
 from .models import Product, db
 
+# 添加项目根目录到路径
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from config import config
+
 # 加载环境变量
 load_dotenv()
-
-# 硅基流动API配置
-API_KEY = os.environ.get('SILICONFLOW_API_KEY', 'sk-vxnqqulpbrduxkhpxmsfebvhyvwdxjebofqcjtdsjrggebvv')
-MODEL_NAME = os.environ.get('SILICONFLOW_MODEL', 'Pro/deepseek-ai/DeepSeek-V3.2-Exp')
-API_URL = "https://api.siliconflow.cn/v1/chat/completions"
 
 # 注册中文字体
 try:
@@ -34,9 +34,9 @@ except Exception as e:
 
 class DataSheetGenerator:
     def __init__(self):
-        self.api_key = API_KEY
-        self.model_name = MODEL_NAME
-        self.api_url = API_URL
+        self.api_key = config.SILICON_FLOW_API_KEY
+        self.model_name = config.AI_MODEL_NAME
+        self.api_url = config.SILICON_FLOW_API_URL
 
     def call_ai_api(self, prompt):
         """
@@ -84,7 +84,14 @@ class DataSheetGenerator:
         ai_overview = self.call_ai_api(overview_prompt)
         
         # 使用AI生成产品特性说明
-        features = json.loads(product.features) if product.features else []
+        features = []
+        if product.features:
+            try:
+                features = json.loads(product.features)
+            except json.JSONDecodeError:
+                current_app.logger.error(f"产品特性JSON解析失败: {product.features}")
+                # 如果JSON解析失败，尝试使用默认空列表
+        
         features_prompt = f"""请为以下产品的特性生成详细说明（每条特性2-3句话）：
 产品名称：{product.name}
 产品型号：{product.model}
@@ -98,10 +105,19 @@ class DataSheetGenerator:
 产品描述：{product.description}"""
         ai_applications = self.call_ai_api(application_prompt)
         
+        # 处理规格信息
+        specifications = {}
+        if product.specifications:
+            try:
+                specifications = json.loads(product.specifications)
+            except json.JSONDecodeError:
+                current_app.logger.error(f"产品规格JSON解析失败: {product.specifications}")
+                # 如果JSON解析失败，使用空字典
+        
         return {
             "overview": ai_overview if ai_overview else product.description,
             "features": ai_features if ai_features else "\n".join([f"• {feature}" for feature in features]),
-            "specifications": json.loads(product.specifications) if product.specifications else {},
+            "specifications": specifications,
             "applications": ai_applications if ai_applications else "",
             "product_name": product.name,
             "product_model": product.model,
@@ -272,8 +288,9 @@ class DataSheetGenerator:
         """
         # 获取所有产品
         products = Product.query.all()
+        total_count = len(products)
         if not products:
-            return {"success": True, "message": "没有找到产品", "generated": 0, "skipped": 0, "failed": 0}
+            return {"success": True, "message": "没有找到产品", "total": 0, "generated": 0, "skipped": 0, "failed": 0}
         
         # 创建输出目录
         output_dir = os.path.join(current_app.root_path, 'static', 'files', 'datasheets')
@@ -301,20 +318,29 @@ class DataSheetGenerator:
             if self.generate_pdf(product, output_path):
                 # 更新产品的datasheet_url
                 product.datasheet_url = f"/static/files/datasheets/{file_name}"
-                db.session.commit()
-                generated_count += 1
-                current_app.logger.info(f"DataSheet for product {product.name} ({product.model}) generated successfully.")
+                try:
+                    db.session.commit()
+                    generated_count += 1
+                    current_app.logger.info(f"DataSheet for product {product.name} ({product.model}) generated successfully.")
+                except Exception as e:
+                    current_app.logger.error(f"数据库更新失败: {str(e)}")
+                    db.session.rollback()
+                    failed_count += 1
             else:
                 failed_count += 1
                 current_app.logger.error(f"Failed to generate DataSheet for product {product.name} ({product.model}).")
         
         # 提交数据库更改
-        db.session.commit()
+        try:
+            db.session.commit()
+        except Exception as e:
+            current_app.logger.error(f"最终数据库提交失败: {str(e)}")
+            db.session.rollback()
         
         return {
             "success": True,
             "message": f"批量生成完成",
-            "total": len(products),
+            "total": total_count,
             "generated": generated_count,
             "skipped": skipped_count,
             "failed": failed_count
