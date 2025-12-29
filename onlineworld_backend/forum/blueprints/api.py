@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify, make_response, send_file
 import os
 from .base import BasePageView, register_page_route, require_api_key
-from ..models import Post, Reply, db
+from ..models import Post, Reply, db, SearchIndex, Board, ShopProduct, DynamicPage
 from flask import current_app
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -81,6 +81,182 @@ class SearchView(BasePageView):
 
 # 注册搜索接口路由
 register_page_route(api_bp, "/search", SearchView)
+
+# ===================== 新搜索引擎API =====================
+
+# 搜索引擎搜索视图类
+class SearchEngineView(BasePageView):
+    def get_data(self):
+        # 获取前端传递的搜索参数
+        keyword = request.args.get('keyword', '').strip()
+        
+        if not keyword:
+            return {
+                "results": [],
+                "keyword": keyword
+            }
+        
+        # 改进的搜索算法：支持多关键词搜索
+        # 1. 分割关键词，去除空字符串
+        keywords = [k.strip() for k in keyword.split() if k.strip()]
+        
+        # 调试：输出原始关键词和分割后的关键词
+        print(f"[调试] API - 原始搜索关键词: '{keyword}'")
+        print(f"[调试] API - 分割后的关键词列表: {keywords}")
+        
+        if not keywords:
+            return {
+                "results": [],
+                "keyword": keyword
+            }
+        
+        # 2. 基本搜索（包含所有关键词）
+        query = SearchIndex.query
+        
+        # 调试：输出查询构建过程
+        print(f"[调试] API - 开始构建查询")
+        for k in keywords:
+            # 转义特殊字符，避免SQL注入
+            safe_k = k.replace('%', '\\%').replace('_', '\\_')
+            print(f"[调试] API - 添加关键词过滤: '{k}' (转义后: '{safe_k}')")
+            print(f"[调试] API - 过滤条件: SearchIndex.title.ilike('%{safe_k}%')")
+            query = query.filter(SearchIndex.title.ilike(f'%{safe_k}%', escape='\\'))
+        
+        # 3. 获取结果
+        results = query.all()
+        print(f"[调试] API - 查询结果数量: {len(results)}")
+        print(f"[调试] API - 查询结果详情: {[(r.id, r.title, r.entity_type) for r in results]}")
+        
+        # 4. 三级排序：完全相符 > 开头匹配 > 包含匹配
+        def get_sort_level(title, keyword_string):
+            """获取排序级别：1级=完全匹配，2级=开头匹配，3级=包含匹配"""
+            title_lower = title.lower()
+            keyword_lower = keyword_string.lower()
+            
+            # 调试：排序级别计算
+            print(f"[调试] API - 标题: '{title_lower}', 关键词: '{keyword_lower}'")
+            
+            # 1级：完全匹配
+            if title_lower == keyword_lower:
+                print(f"[调试] API -  完全匹配，返回级别1")
+                return 1
+            
+            # 2级：开头匹配（标题以搜索词开头）
+            if title_lower.startswith(keyword_lower):
+                print(f"[调试] API -  开头匹配，返回级别2")
+                return 2
+            
+            # 3级：包含匹配（标题包含搜索词）
+            print(f"[调试] API -  包含匹配，返回级别3")
+            return 3
+        
+        # 按级别排序，同一级别内按更新时间降序
+        print(f"[调试] API - 开始三级排序，结果数量: {len(results)}")
+        sorted_results = sorted(
+            results, 
+            key=lambda r: (get_sort_level(r.title, keyword), r.update_time), 
+            reverse=True
+        )
+        print(f"[调试] API - 排序完成，排序后结果数量: {len(sorted_results)}")
+        print(f"[调试] API - 排序后结果详情: {[(r.id, r.title, r.entity_type) for r in sorted_results]}")
+        
+        # 5. 格式化搜索结果
+        formatted_results = []
+        for result in sorted_results:
+            formatted_results.append({
+                "id": result.id,
+                "title": result.title,
+                "type": result.entity_type,
+                "url": result.url,
+                "update_time": result.update_time.strftime("%Y-%m-%d %H:%M:%S")
+            })
+        
+        return {
+            "results": formatted_results,
+            "keyword": keyword
+        }
+
+# 注册搜索引擎路由
+register_page_route(api_bp, "/search-engine", SearchEngineView)
+
+# 构建搜索索引的API（仅内部使用或管理员调用）
+@api_bp.route("/search-engine/build-index", methods=["POST"])
+def build_search_index():
+    """
+    构建搜索索引，从所有可搜索的模型中提取标题并存储到SearchIndex表
+    """
+    try:
+        # 首先清空现有的索引
+        SearchIndex.query.delete()
+        db.session.commit()
+        
+        # 从各个模型中提取标题并创建索引
+        search_indexes = []
+        
+        # 1. 论坛板块 (Board)
+        boards = Board.query.all()
+        for board in boards:
+            index = SearchIndex(
+                title=board.name,
+                entity_type="forum_board",
+                entity_id=board.id,
+                url=f"/forum/board/{board.id}"
+            )
+            search_indexes.append(index)
+        
+        # 2. 论坛帖子 (Post)
+        posts = Post.query.all()
+        for post in posts:
+            index = SearchIndex(
+                title=post.title,
+                entity_type="forum_post",
+                entity_id=post.id,
+                url=f"/forum/post/{post.id}"
+            )
+            search_indexes.append(index)
+        
+        # 3. 商城商品 (ShopProduct)
+        products = ShopProduct.query.filter_by(is_active=True).all()
+        for product in products:
+            index = SearchIndex(
+                title=product.name,
+                entity_type="shop_product",
+                entity_id=product.id,
+                url=f"/shop/product/{product.id}"
+            )
+            search_indexes.append(index)
+        
+        # 4. 动态页面 (DynamicPage)
+        pages = DynamicPage.query.filter_by(is_active=True, is_public=True).all()
+        for page in pages:
+            index = SearchIndex(
+                title=page.title,
+                entity_type="dynamic_page",
+                entity_id=page.id,
+                url=f"/dynamic/{page.slug}"
+            )
+            search_indexes.append(index)
+        
+        # 批量添加索引
+        db.session.add_all(search_indexes)
+        db.session.commit()
+        
+        return jsonify({
+            "status": "success",
+            "message": f"搜索索引构建完成，共添加 {len(search_indexes)} 条记录"
+        }), 200
+        
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        return jsonify({
+            "status": "error",
+            "message": f"数据库错误：{str(e)}"
+        }), 500
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": f"构建索引失败：{str(e)}"
+        }), 500
 
 # 大模型生成页面接口（带鉴权）
 @api_bp.route("/ai/generate-page", methods=["POST"])

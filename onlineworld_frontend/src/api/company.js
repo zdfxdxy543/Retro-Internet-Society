@@ -57,7 +57,7 @@ export default {
   // 下载产品DataSheet
   downloadProductDatasheet(productId) {
     return request({
-      url: `/datasheet/download/${productId}`,
+      url: `/api/datasheet/download/${productId}`,
       method: 'get',
       responseType: 'blob'  // 重要：设置响应类型为blob，用于下载文件
     })

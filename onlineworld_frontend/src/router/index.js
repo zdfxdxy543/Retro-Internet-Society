@@ -8,6 +8,8 @@ import Contact from '../views/Contact.vue'
 import DynamicPage from '../views/DynamicPage.vue'
 import UserProfile from '../views/UserProfile.vue'
 import SearchResult from '../views/SearchResult.vue'
+import SearchEngineHome from '../views/SearchEngineHome.vue'
+import SearchEngineResult from '../views/SearchEngineResult.vue'
 // 导入公司网站视图组件
 import CompanyIndex from '../views/CompanyIndex.vue'
 import CompanyProducts from '../views/CompanyProducts.vue'
@@ -218,6 +220,19 @@ const routes = [
     name: 'EmailView',
     redirect: to => ({ path: `/email/detail/${to.params.id}` }),
     beforeEnter: emailAuthGuard
+  },
+  // 搜索引擎路由
+  {
+    path: '/search-engine',
+    name: 'SearchEngineHome',
+    component: SearchEngineHome,
+    meta: { title: 'NexusSearch - 首页' }
+  },
+  {
+    path: '/search-engine/search',
+    name: 'SearchEngineResult',
+    component: SearchEngineResult,
+    meta: { title: 'NexusSearch - 搜索结果' }
   }
 ]
 

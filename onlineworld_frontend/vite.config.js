@@ -58,6 +58,11 @@ export default defineConfig({
       '/email/outbox': {
         target: 'http://localhost:5000',
         changeOrigin: true
+      },
+      // 代理搜索引擎API请求
+      '/api/search-engine': {
+        target: 'http://localhost:5000',
+        changeOrigin: true
       }
     }
   },

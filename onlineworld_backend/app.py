@@ -9,7 +9,7 @@ from flask import Flask, request, jsonify, make_response, session
 from flask_cors import CORS
 from onlineworld_backend.config import Config
 # 从forum.models导入数据库和模型类
-from forum.models import db, Board, Post, Reply, PlayerStatus, CompanyInfo, ProductCategory, Product
+from forum.models import db, Board, Post, Reply, PlayerStatus, CompanyInfo, ProductCategory, Product, SearchIndex
 from datetime import datetime
 import os
 from flask.views import MethodView  # 导入Flask类视图基类
@@ -47,6 +47,7 @@ with app.app_context():
 from forum.blueprints.forum_pages import forum_bp
 from forum.blueprints.api import api_bp
 from forum.blueprints.user import user_bp
+from forum.blueprints.search_engine import search_engine_bp  # 导入搜索引擎蓝图
 # 导入company_pages模块，执行其中的路由注册代码
 from forum.blueprints.company_pages import api_bp  # 注意：这里不需要导入company_bp，因为路由已经注册到api_bp中
 # 导入AI地图模块
@@ -62,6 +63,8 @@ app.register_blueprint(api_bp)     # API路由，前缀 /api
 app.register_blueprint(user_bp)    # 用户相关路由，前缀 /user
 app.register_blueprint(shop_bp)    # 商城路由，前缀 /shop
 app.register_blueprint(email_bp)    # 邮箱路由，前缀 /email
+# 移除搜索引擎网页路由注册，避免与前端路由冲突，只保留API路由
+# app.register_blueprint(search_engine_bp)  # 搜索引擎路由，前缀 /search-engine
 # 移除对company_bp的注册，因为公司网站路由现在已经注册到api_bp中了
 # app.register_blueprint(company_bp)  # 公司网站路由，前缀 /company
 

@@ -472,3 +472,32 @@ class ShopProduct(db.Model):
             "create_time": self.create_time.strftime("%Y-%m-%d %H:%M:%S"),
             "update_time": self.update_time.strftime("%Y-%m-%d %H:%M:%S")
         }
+
+# ===================== 搜索引擎模型 =====================
+
+class SearchIndex(db.Model):
+    """搜索引擎索引表，存储所有可搜索的页面标题"""
+    __tablename__ = 'search_index'
+    
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    title = db.Column(db.String(200), nullable=False)  # 页面标题（搜索索引）
+    entity_type = db.Column(db.String(50), nullable=False)  # 实体类型（如"forum_post", "shop_product", "board"等）
+    entity_id = db.Column(db.Integer, nullable=False)  # 实体ID（对应原表的主键）
+    url = db.Column(db.String(200), nullable=False)  # 页面URL（用于前端跳转）
+    create_time = db.Column(db.DateTime, default=datetime.utcnow)  # 创建时间
+    update_time = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)  # 更新时间
+    
+    def __repr__(self):
+        return f"<SearchIndex {self.title} ({self.entity_type})>"
+    
+    def to_dict(self):
+        """转换为字典格式"""
+        return {
+            "id": self.id,
+            "title": self.title,
+            "entity_type": self.entity_type,
+            "entity_id": self.entity_id,
+            "url": self.url,
+            "create_time": self.create_time.strftime("%Y-%m-%d %H:%M:%S"),
+            "update_time": self.update_time.strftime("%Y-%m-%d %H:%M:%S")
+        }
