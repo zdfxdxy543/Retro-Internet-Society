@@ -23,7 +23,12 @@ export default defineConfig({
         target: 'http://localhost:5000',
         changeOrigin: true,
         // 不要重写路径，因为后端API蓝图已经有/api前缀
-        // rewrite: (path) => path.replace(/^\/api/, '')
+        // rewrite: (path) => path.replace(/^/api/, '')
+      },
+      // 代理论坛页面请求
+      '/forum': {
+        target: 'http://localhost:5000',
+        changeOrigin: true
       },
       // 代理邮箱系统API调用，但保留前端路由功能
       '/email/register': {

@@ -5,7 +5,7 @@ import time
 import random
 import json
 from datetime import datetime
-from config import Config
+from onlineworld_backend.config import Config
 from PIL import Image
 import io
 

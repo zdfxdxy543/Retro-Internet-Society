@@ -65,6 +65,8 @@ class DynamicPage(db.Model):
     content_type = db.Column(db.String(20), default="html")  # 内容格式（html/markdown）
     create_time = db.Column(db.DateTime, default=datetime.utcnow)  # 生成时间
     is_active = db.Column(db.Boolean, default=True)  # 是否启用（可下架）
+    category = db.Column(db.String(50), default="general")  # 页面分类
+    is_public = db.Column(db.Boolean, default=True)  # 是否公开
 
     def __repr__(self):
         return f"<DynamicPage {self.slug}>"

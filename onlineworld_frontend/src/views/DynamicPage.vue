@@ -41,7 +41,7 @@ import Footer from '../components/Footer.vue'
 
 const route = useRoute()
 const slug = route.params.slug  // 从路由获取slug
-const dynamicPage = ref(null)
+const dynamicPage = ref({ title: '', content: '', content_type: 'html', create_time: '' })
 
 // Markdown渲染函数（可选）
 const renderMarkdown = (content) => {
@@ -51,7 +51,7 @@ const renderMarkdown = (content) => {
 // 加载动态页面数据
 onMounted(async () => {
   await new Promise(resolve => setTimeout(resolve, 200))
-  const res = await request.get(`/page/${slug}`)  // 调用通用动态路由
+  const res = await request.get(`/forum/page/${slug}`)  // 调用通用动态路由，使用正确的forum蓝图路径
   if (res.status === 'success') {
     dynamicPage.value = res.data.dynamic_page
     document.title = res.data.title

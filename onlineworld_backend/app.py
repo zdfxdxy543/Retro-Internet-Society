@@ -7,7 +7,7 @@ if project_root not in sys.path:
 
 from flask import Flask, request, jsonify, make_response, session
 from flask_cors import CORS
-from config import config
+from onlineworld_backend.config import Config
 # 从forum.models导入数据库和模型类
 from forum.models import db, Board, Post, Reply, PlayerStatus, CompanyInfo, ProductCategory, Product
 from datetime import datetime
@@ -19,11 +19,11 @@ import functools
 
 # 创建Flask应用实例
 app = Flask(__name__)
-app.config.from_object(config)
+app.config.from_object(Config)
 
 # 配置应用
-app.config["ALLOWED_HTML_TAGS"] = ["div", "p", "h2", "h3", "h4", "ul", "li", "a", "strong", "em", "code", "pre"]
-app.config["ALLOWED_HTML_ATTRS"] = {"a": ["href", "target", "rel"], "code": ["class"]}
+app.config["ALLOWED_HTML_TAGS"] = ["div", "p", "h2", "h3", "h4", "ul", "li", "a", "strong", "em", "code", "pre", "img"]
+app.config["ALLOWED_HTML_ATTRS"] = {"a": ["href", "target", "rel"], "code": ["class"], "img": ["src", "alt", "title", "width", "height"]}
 app.config["API_KEY"] = "your-secret-key-123456"  # 请替换为你的实际密钥（重要！）
 
 # 启用CORS，增加对/email路径的明确支持
