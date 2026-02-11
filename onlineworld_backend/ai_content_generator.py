@@ -26,7 +26,7 @@ MODEL_NAME = Config.AI_MODEL_NAME
 NEW_POSTS_PER_RUN = 1  # 增加到每次运行生成5个新帖子
 REPLIES_PER_RUN = 4    # 增加到每次运行生成8个回复
 REPLY_TIME_WINDOW = 24  # 仅回复24小时内帖子
-PROB_REUSE_USER = 0.7   # 70%复用现有用户
+PROB_REUSE_USER = 1.0   # 70%复用现有用户
 USE_TOOL_PROB = 1.0     # 总是使用工具获取地点信息，确保与数据库一致
 BASE_AUTHOR_POOL = [
     "路人甲", "技术爱好者", "打工人小李", "吃货小张", "运维老司机",
@@ -468,7 +468,7 @@ def generate_new_posts():
                     "content": f'''请发一个关于「{theme}」的帖子，要求：
 1. 标题：简洁明了，含「{theme}」关键词，不超过20字；
 2. 内容：口语化，3-5句话，像真实用户提问/分享，贴合「{author}」昵称风格；
-3. 风格：接地气、有生活气息，但内容必须是虚构的，不与现实对应；
+3. 风格：接地气、有生活气息，符合现实，但内容中提到的地名与现实无关；
 4. 如果主题与地点相关（如租房、通勤、美食），请使用工具获取虚构地点信息，使帖子内容更有想象力；
 5. 输出格式：先标题（换行）再内容，无多余字符。'''
                 }
@@ -599,62 +599,62 @@ def generate_replies():
         db.close()
 
 # -------------------------- 主程序入口 --------------------------
-# def main():
-#     # 导入Flask应用和数据库实例
-#     from app import app, db
+def main():
+    # 导入Flask应用和数据库实例
+    from app import app, db
     
-#     # 创建并推送Flask应用上下文
-#     with app.app_context():
-#         # 先验证数据库连接
-#         if not test_db_connection():
-#             return
+    # 创建并推送Flask应用上下文
+    with app.app_context():
+        # 先验证数据库连接
+        if not test_db_connection():
+            return
         
-#         print("🚀 启动AI内容生成器（支持工具调用）")
-#         print("可用工具：")
-#         for tool in tool_registry.list_tools():
-#             print(f"  - {tool.name()}: {tool.description()}")
+        print("🚀 启动AI内容生成器（支持工具调用）")
+        print("可用工具：")
+        for tool in tool_registry.list_tools():
+            print(f"  - {tool.name()}: {tool.description()}")
         
-#         # 执行发帖（暂时注释掉，只测试回帖）
-#         print("\n📝 开始生成新帖子...")
-#         # generate_new_posts()  # 生成新帖子
+        # 执行发帖（暂时注释掉，只测试回帖）
+        print("\n📝 开始生成新帖子...")
+        generate_new_posts()  # 生成新帖子
         
-#         # 执行回帖
-#         print("\n💬 开始生成回复...")
-#         generate_replies()    # 生成回复
+        # 执行回帖
+        # print("\n💬 开始生成回复...")
+        # generate_replies()    # 生成回复
         
-#         print("\n✅ 已完成回帖，程序结束")
+        print("\n✅ 已完成回帖，程序结束")
 
 # # 直接执行主函数
 # if __name__ == "__main__":
 #     main()
 
-def main():
-    # 先验证数据库连接
-    if not test_db_connection():
-        return
+# def main():
+#     # 先验证数据库连接
+#     if not test_db_connection():
+#         return
     
-    # 初始化定时任务（每个半点执行）
-    scheduler = BlockingScheduler(timezone="Asia/Shanghai")
-    scheduler.add_job(
-        func=lambda: [generate_new_posts(), generate_replies()],
-        trigger="cron",
-        minute="0,30",
-        id="auto_content_job",
-        name="半点自动发帖回复"
-    )
+#     # 初始化定时任务（每个半点执行）
+#     scheduler = BlockingScheduler(timezone="Asia/Shanghai")
+#     scheduler.add_job(
+#         func=lambda: [generate_new_posts(), generate_replies()],
+#         trigger="cron",
+#         minute="0,30",
+#         id="auto_content_job",
+#         name="半点自动发帖回复"
+#     )
     
-    # 启动日志
-    print("=" * 60)
-    print("🚀 自动内容生成服务启动成功（无Flask依赖）")
-    print(f"当前时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"配置：{NEW_POSTS_PER_RUN}帖/{REPLIES_PER_RUN}回复/次 | 24小时内回复 | 70%复用用户")
-    print(f"数据库：{DATABASE_URL}")
-    print("=" * 60)
+#     # 启动日志
+#     print("=" * 60)
+#     print("🚀 自动内容生成服务启动成功（无Flask依赖）")
+#     print(f"当前时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+#     print(f"配置：{NEW_POSTS_PER_RUN}帖/{REPLIES_PER_RUN}回复/次 | 24小时内回复 | 70%复用用户")
+#     print(f"数据库：{DATABASE_URL}")
+#     print("=" * 60)
     
-    try:
-        scheduler.start()
-    except (KeyboardInterrupt, SystemExit):
-        print("⚠️  服务已停止")
+#     try:
+#         scheduler.start()
+#     except (KeyboardInterrupt, SystemExit):
+#         print("⚠️  服务已停止")
 
 if __name__ == "__main__":
     main()

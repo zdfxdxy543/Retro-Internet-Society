@@ -683,6 +683,8 @@ class ToolRegistry:
 # 创建全局工具注册表实例
 tool_registry = ToolRegistry()
 
+
+
 # 自动注册所有工具
 tool_registry.register_tool(ForumInfoTool())
 tool_registry.register_tool(CompanyInfoTool())

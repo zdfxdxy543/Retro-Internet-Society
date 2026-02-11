@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify, make_response, send_file
 import os
 from .base import BasePageView, register_page_route, require_api_key
-from ..models import Post, Reply, db, SearchIndex, Board, ShopProduct, DynamicPage
+from ..models import Post, Reply, db, SearchIndex, Board, ShopProduct, DynamicPage, OnlineDiskShare
 from flask import current_app
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -507,9 +507,7 @@ def api_user(author):
 
 
 
-# 导入必要的模块
-import os
-from flask import send_file
+
 
 # 添加DataSheet生成和下载的API端点
 @api_bp.route("/datasheet/generate/<int:product_id>", methods=["POST"])
@@ -576,6 +574,70 @@ def download_datasheet(product_id):
         return jsonify({
             "status": "error",
             "message": f"下载DataSheet失败：{str(e)}"
+        }), 500
+
+# -------------------------- 网盘分享API --------------------------
+
+@api_bp.route("/disk/download", methods=["POST"])
+def download_disk_file():
+    """
+    网盘文件下载API，需要验证分享号和密码
+    请求体：{"share_id": "分享号", "password": "密码"}
+    """
+    try:
+        data = request.get_json()
+        share_id = data.get("share_id").strip() if data.get("share_id") else ""
+        password = data.get("password").strip() if data.get("password") else ""
+        
+        if not share_id or not password:
+            return jsonify({
+                "status": "error",
+                "message": "请输入分享号和密码"
+            }), 400
+        
+        # 查找分享记录
+        share = OnlineDiskShare.query.filter_by(share_id=share_id, is_active=True).first()
+        
+        if not share:
+            return jsonify({
+                "status": "error",
+                "message": "分享不存在或已失效"
+            }), 404
+        
+        # 验证密码（直接比较字符串）
+        if password != share.password:
+            return jsonify({
+                "status": "error",
+                "message": "密码错误"
+            }), 401
+        
+        # 构建文件路径
+        file_path = os.path.join(current_app.root_path, share.file_path.lstrip("/"))
+        
+        if not os.path.exists(file_path):
+            # 更新分享为无效
+            share.is_active = False
+            db.session.commit()
+            return jsonify({
+                "status": "error",
+                "message": "文件不存在或已被删除"
+            }), 404
+        
+        # 更新下载次数
+        share.download_count += 1
+        db.session.commit()
+        
+        # 发送文件下载
+        return send_file(
+            file_path,
+            as_attachment=True,
+            download_name=share.file_name,
+            mimetype=None  # 让Flask自动检测文件类型
+        )
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": f"下载网盘文件失败：{str(e)}"
         }), 500
 
 

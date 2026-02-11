@@ -10,6 +10,7 @@ import UserProfile from '../views/UserProfile.vue'
 import SearchResult from '../views/SearchResult.vue'
 import SearchEngineHome from '../views/SearchEngineHome.vue'
 import SearchEngineResult from '../views/SearchEngineResult.vue'
+import OnlineDisk from '../views/OnlineDisk.vue'
 // 导入公司网站视图组件
 import CompanyIndex from '../views/CompanyIndex.vue'
 import CompanyProducts from '../views/CompanyProducts.vue'
@@ -233,6 +234,13 @@ const routes = [
     name: 'SearchEngineResult',
     component: SearchEngineResult,
     meta: { title: 'NexusSearch - 搜索结果' }
+  },
+  // 网盘系统路由
+  {
+    path: '/disk',
+    name: 'OnlineDisk',
+    component: OnlineDisk,
+    meta: { title: '在线网盘 - 首页' }
   }
 ]
 

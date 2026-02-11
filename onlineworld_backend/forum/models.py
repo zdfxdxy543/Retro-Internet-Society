@@ -422,6 +422,7 @@ class ShopMerchant(db.Model):
             "update_time": self.update_time.strftime("%Y-%m-%d %H:%M:%S")
         }
 
+# -------------------------- 商城商品模型（独立） --------------------------
 class ShopProduct(db.Model):
     """商城商品模型（独立）"""
     __tablename__ = 'shop_product'
@@ -444,7 +445,7 @@ class ShopProduct(db.Model):
     specs = db.Column(db.JSON, default=dict)  # 商品规格(JSON)
     create_time = db.Column(db.DateTime, default=datetime.utcnow)
     update_time = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+
     def __repr__(self):
         return f"<ShopProduct {self.name}>"
     
@@ -471,6 +472,35 @@ class ShopProduct(db.Model):
             "specs": self.specs or {},
             "create_time": self.create_time.strftime("%Y-%m-%d %H:%M:%S"),
             "update_time": self.update_time.strftime("%Y-%m-%d %H:%M:%S")
+        }
+
+# -------------------------- 网盘分享模型 --------------------------
+class OnlineDiskShare(db.Model):
+    """网盘分享模型"""
+    __tablename__ = 'online_disk_share'
+    
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    share_id = db.Column(db.String(50), unique=True, nullable=False)  # 分享文件号
+    password = db.Column(db.String(255), nullable=False)  # 密码（加密存储）
+    file_path = db.Column(db.String(200), nullable=False)  # 文件路径
+    file_name = db.Column(db.String(200), nullable=False)  # 文件名
+    create_time = db.Column(db.DateTime, default=datetime.utcnow)  # 创建时间
+    download_count = db.Column(db.Integer, default=0)  # 下载次数
+    is_active = db.Column(db.Boolean, default=True)  # 是否有效
+    
+    def __repr__(self):
+        return f"<OnlineDiskShare {self.share_id} - {self.file_name}>"
+    
+    def to_dict(self):
+        """转换为字典格式"""
+        return {
+            "id": self.id,
+            "share_id": self.share_id,
+            "file_path": self.file_path,
+            "file_name": self.file_name,
+            "create_time": self.create_time.strftime("%Y-%m-%d %H:%M:%S"),
+            "download_count": self.download_count,
+            "is_active": self.is_active
         }
 
 # ===================== 搜索引擎模型 =====================

@@ -9,17 +9,18 @@ from sqlalchemy.orm import sessionmaker
 from forum.models import Board, Post, Reply
 # 导入工具系统
 from ai_tools import tool_registry
+# 导入配置
+from config import Config
+from apscheduler.schedulers.blocking import BlockingScheduler
 
-# -------------------------- 基础配置（必须手动填写，与项目一致）--------------------------
-# 数据库配置（关键！必须和项目config.py中的数据库地址完全一致）
-# 数据库配置（替换为你的绝对路径，处理反斜杠转义）
-DATABASE_URL = r"sqlite:///D:\Else\GreatGame\onlineworld_backend\instance\forum.db"
-# 若用MySQL，需先安装依赖：pip install pymysql
+# -------------------------- 基础配置（从config.py获取）--------------------------
+# 数据库配置（使用与项目config.py相同的配置）
+DATABASE_URL = Config.SQLALCHEMY_DATABASE_URI
 
 # 硅基流动API配置
-SILICONFLOW_API_KEY = "sk-vxnqqulpbrduxkhpxmsfebvhyvwdxjebofqcjtdsjrggebvv"  # 替换为你的API密钥
-SILICONFLOW_API_URL = "https://api.siliconflow.cn/v1/chat/completions"
-MODEL_NAME = "Pro/deepseek-ai/DeepSeek-V3.2-Exp"  # 硅基流动支持的模型（如glm-4、llama3-8b）
+SILICONFLOW_API_KEY = Config.SILICONFLOW_API_KEY
+SILICONFLOW_API_URL = Config.SILICONFLOW_API_URL
+MODEL_NAME = Config.AI_MODEL_NAME
 
 # 发帖/回复配置
 NEW_POSTS_PER_RUN = 1  # 增加到每次运行生成5个新帖子
@@ -373,8 +374,13 @@ def generate_content_with_tools(messages, temperature=0.7, use_tool_prob=USE_TOO
                     return None
                     
                 message = response["choices"][0]["message"]
-                # 同时检查reasoning_content和content字段
-                content = message.get("reasoning_content", "").strip() or message.get("content", "").strip()
+                # 详细记录content和reasoning_content的内容
+                content_field = message.get("content", "").strip()
+                reasoning_content_field = message.get("reasoning_content", "").strip()
+                print(f"📋 工具调用后content字段内容: {'[空]' if not content_field else content_field[:100]}...")
+                print(f"📋 工具调用后reasoning_content字段内容: {'[空]' if not reasoning_content_field else reasoning_content_field[:100]}...")
+                # 优先使用content字段（最终输出结果），仅当content为空时才使用reasoning_content
+                content = content_field or reasoning_content_field
                 
                 # 检查是否是DSML格式的工具调用
                 if content and "<｜DSML｜function_calls>" in content:
@@ -386,8 +392,13 @@ def generate_content_with_tools(messages, temperature=0.7, use_tool_prob=USE_TOO
             
             # 如果大模型直接返回了内容
             print(f"📤 直接返回API响应：{json.dumps(response, ensure_ascii=False, indent=2)}")
-            # 同时检查reasoning_content和content字段
-            content = message.get("reasoning_content", "").strip() or message.get("content", "").strip()
+            # 详细记录content和reasoning_content的内容
+            content_field = message.get("content", "").strip()
+            reasoning_content_field = message.get("reasoning_content", "").strip()
+            print(f"📋 直接返回时content字段内容: {'[空]' if not content_field else content_field[:100]}...")
+            print(f"📋 直接返回时reasoning_content字段内容: {'[空]' if not reasoning_content_field else reasoning_content_field[:100]}...")
+            # 优先使用content字段（最终输出结果），仅当content为空时才使用reasoning_content
+            content = content_field or reasoning_content_field
             
             # 检查是否是DSML格式的工具调用
             if content and "<｜DSML｜function_calls>" in content:
@@ -410,8 +421,8 @@ def generate_content_with_tools(messages, temperature=0.7, use_tool_prob=USE_TOO
             print(f"📤 API返回原始响应：{json.dumps(response, ensure_ascii=False, indent=2)}")
             if "choices" in response and response["choices"]:
                 message = response["choices"][0]["message"]
-                # 同时检查reasoning_content和content字段
-                content = message.get("reasoning_content", "").strip() or message.get("content", "").strip()
+                # 优先使用content字段（最终输出结果），仅当content为空时才使用reasoning_content
+                content = message.get("content", "").strip() or message.get("reasoning_content", "").strip()
                 
                 # 检查是否是DSML格式的工具调用
                 if content and "<｜DSML｜function_calls>" in content:
@@ -604,15 +615,46 @@ def main():
             print(f"  - {tool.name()}: {tool.description()}")
         
         # 执行发帖（暂时注释掉，只测试回帖）
-        # print("\n📝 开始生成新帖子...")
+        print("\n📝 开始生成新帖子...")
         # generate_new_posts()  # 生成新帖子
         
         # 执行回帖
-        print("\n💬 开始生成回复...")
-        generate_replies()    # 生成回复
+        # print("\n💬 开始生成回复...")
+        # generate_replies()    # 生成回复
         
         print("\n✅ 已完成回帖，程序结束")
 
-# 直接执行主函数
+# # 直接执行主函数
+# if __name__ == "__main__":
+#     main()
+
+# def main():
+#     # 先验证数据库连接
+#     if not test_db_connection():
+#         return
+    
+#     # 初始化定时任务（每个半点执行）
+#     scheduler = BlockingScheduler(timezone="Asia/Shanghai")
+#     scheduler.add_job(
+#         func=lambda: [generate_new_posts(), generate_replies()],
+#         trigger="cron",
+#         minute="0,30",
+#         id="auto_content_job",
+#         name="半点自动发帖回复"
+#     )
+    
+#     # 启动日志
+#     print("=" * 60)
+#     print("🚀 自动内容生成服务启动成功（无Flask依赖）")
+#     print(f"当前时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+#     print(f"配置：{NEW_POSTS_PER_RUN}帖/{REPLIES_PER_RUN}回复/次 | 24小时内回复 | 70%复用用户")
+#     print(f"数据库：{DATABASE_URL}")
+#     print("=" * 60)
+    
+#     try:
+#         scheduler.start()
+#     except (KeyboardInterrupt, SystemExit):
+#         print("⚠️  服务已停止")
+
 if __name__ == "__main__":
     main()
