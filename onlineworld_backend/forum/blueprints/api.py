@@ -640,6 +640,39 @@ def download_disk_file():
             "message": f"下载网盘文件失败：{str(e)}"
         }), 500
 
+# -------------------------- 调度AI API --------------------------
+
+@api_bp.route("/ai/schedule", methods=["POST"])
+def ai_schedule():
+    """
+    调度AI的API接口
+    请求体：{"task": "任务描述", "parameters": {"参数": "值"}}
+    """
+    try:
+        # 延迟导入，避免循环依赖
+        from ai_scheduler import aI_scheduler
+        
+        data = request.get_json()
+        task_description = data.get("task", "")
+        parameters = data.get("parameters", {})
+        
+        if not task_description:
+            return jsonify({
+                "status": "error",
+                "message": "任务描述不能为空"
+            }), 400
+        
+        # 运行任务
+        result = aI_scheduler.run_task(task_description, parameters)
+        
+        return jsonify(result), 200 if result.get("status") == "success" else 500
+    except ValueError as e:
+        # 参数校验失败
+        return jsonify({"status": "error", "message": str(e)}), 400
+    except Exception as e:
+        # 其他未知异常
+        return jsonify({"status": "error", "message": f"调度AI失败：{str(e)}"}), 500
+
 
 @api_bp.route("/images/<path:image_filename>", methods=["GET"])
 def get_image(image_filename):
